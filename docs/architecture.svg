@@ -1,111 +1,153 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1110 640" width="1110" height="640" role="img" aria-labelledby="title desc" font-family="'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 730" width="1200" height="730" role="img" aria-labelledby="title desc" font-family="'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif">
   <title id="title">ChoboPDF architecture</title>
-  <desc id="desc">The UI edits an in-memory page list through undoable commands. A thumbnailer thread renders pages from the source PDFs for thumbnails, the preview and JPG export, and a save thread writes the page list to a new PDF.</desc>
+  <desc id="desc">Three flows through four layers. Edit: the UI pushes undoable commands that change an in-memory page list. Open and render: one thumbnailer thread opens the source PDFs, asking for a password when needed, and renders thumbnails, the preview and JPG images. Save and extract: a save thread copies the listed pages from the source PDFs into a new PDF.</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    <marker id="edit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="render" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/>
+    </marker>
+    <marker id="save" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#15803d"/>
     </marker>
   </defs>
 
-  <rect width="1110" height="640" rx="12" fill="#ffffff"/>
+  <rect width="1200" height="730" rx="12" fill="#ffffff"/>
+
+  <!-- title and legend -->
+  <text x="20" y="38" font-size="17" font-weight="700" fill="#0f172a">ChoboPDF architecture</text>
+  <g font-size="12" fill="#334155">
+    <path d="M700,33 H736" stroke="#2563eb" stroke-width="2.2" marker-end="url(#edit)"/>
+    <text x="744" y="37">Edit</text>
+    <path d="M800,33 H836" stroke="#c2410c" stroke-width="2.2" marker-end="url(#render)"/>
+    <text x="844" y="37">Open and render</text>
+    <path d="M968,33 H1004" stroke="#15803d" stroke-width="2.2" marker-end="url(#save)"/>
+    <text x="1012" y="37">Save, copy and extract</text>
+  </g>
 
   <!-- layers -->
   <g stroke-width="1">
-    <rect x="20" y="20" width="1070" height="150" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
-    <rect x="20" y="200" width="1070" height="130" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
-    <rect x="20" y="360" width="1070" height="130" rx="10" fill="#fff7ed" stroke="#fed7aa"/>
-    <rect x="20" y="520" width="1070" height="100" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+    <rect x="20" y="60" width="1160" height="140" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <rect x="20" y="250" width="1160" height="120" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <rect x="20" y="420" width="1160" height="120" rx="10" fill="#fff7ed" stroke="#fed7aa"/>
+    <rect x="20" y="590" width="1160" height="120" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
   </g>
   <g fill="#0f172a">
-    <text x="36" y="48" font-size="15" font-weight="700">UI</text>
-    <text x="36" y="67" font-size="11.5" fill="#475569">chobopdf/ui</text>
-    <text x="36" y="83" font-size="11.5" fill="#475569">Qt main thread</text>
-    <text x="36" y="228" font-size="15" font-weight="700">Model</text>
-    <text x="36" y="247" font-size="11.5" fill="#475569">chobopdf/model</text>
-    <text x="36" y="263" font-size="11.5" fill="#475569">Qt main thread</text>
-    <text x="36" y="388" font-size="15" font-weight="700">Workers</text>
-    <text x="36" y="407" font-size="11.5" fill="#475569">one background</text>
-    <text x="36" y="423" font-size="11.5" fill="#475569">thread each</text>
-    <text x="36" y="548" font-size="15" font-weight="700">Files</text>
-    <text x="36" y="567" font-size="11.5" fill="#475569">on disk</text>
+    <text x="36" y="90" font-size="15" font-weight="700">UI</text>
+    <text x="36" y="109" font-size="11.5" fill="#475569">chobopdf/ui</text>
+    <text x="36" y="125" font-size="11.5" fill="#475569">Qt main thread</text>
+    <text x="36" y="280" font-size="15" font-weight="700">Model</text>
+    <text x="36" y="299" font-size="11.5" fill="#475569">chobopdf/model</text>
+    <text x="36" y="315" font-size="11.5" fill="#475569">Qt main thread</text>
+    <text x="36" y="450" font-size="15" font-weight="700">Workers</text>
+    <text x="36" y="469" font-size="11.5" fill="#475569">one background</text>
+    <text x="36" y="485" font-size="11.5" fill="#475569">thread each</text>
+    <text x="36" y="620" font-size="15" font-weight="700">Files</text>
+    <text x="36" y="639" font-size="11.5" fill="#475569">on disk</text>
   </g>
 
   <!-- components -->
   <g fill="#ffffff" stroke-width="1.5">
-    <rect x="180" y="64" width="200" height="86" rx="8" stroke="#3b82f6"/>
-    <rect x="400" y="64" width="270" height="86" rx="8" stroke="#3b82f6"/>
-    <rect x="690" y="64" width="160" height="86" rx="8" stroke="#3b82f6"/>
-    <rect x="870" y="64" width="120" height="86" rx="8" stroke="#3b82f6"/>
-    <rect x="240" y="240" width="300" height="70" rx="8" stroke="#16a34a"/>
-    <rect x="620" y="240" width="280" height="70" rx="8" stroke="#16a34a"/>
-    <rect x="180" y="400" width="400" height="70" rx="8" stroke="#ea580c"/>
-    <rect x="660" y="400" width="400" height="70" rx="8" stroke="#ea580c"/>
-    <rect x="180" y="555" width="400" height="50" rx="8" stroke="#64748b"/>
-    <rect x="660" y="555" width="200" height="50" rx="8" stroke="#64748b"/>
-    <rect x="880" y="555" width="180" height="50" rx="8" stroke="#64748b"/>
+    <rect x="170" y="96" width="250" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="440" y="96" width="280" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="740" y="96" width="170" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="930" y="96" width="130" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="330" y="285" width="330" height="70" rx="8" stroke="#7c3aed"/>
+    <rect x="740" y="285" width="300" height="70" rx="8" stroke="#7c3aed"/>
+    <rect x="170" y="455" width="440" height="70" rx="8" stroke="#ea580c"/>
+    <rect x="700" y="455" width="460" height="70" rx="8" stroke="#ea580c"/>
+    <rect x="170" y="622" width="440" height="70" rx="8" stroke="#64748b"/>
+    <rect x="700" y="622" width="220" height="70" rx="8" stroke="#64748b"/>
+    <rect x="940" y="622" width="220" height="70" rx="8" stroke="#64748b"/>
   </g>
   <g text-anchor="middle" fill="#0f172a">
-    <text x="280" y="94" font-size="14" font-weight="700">MainWindow</text>
-    <text x="280" y="114" font-size="11.5" fill="#475569">menus and shortcuts</text>
-    <text x="280" y="130" font-size="11.5" fill="#475569">open · merge · save · export</text>
+    <text x="295" y="119" font-size="14" font-weight="700">MainWindow</text>
+    <text x="295" y="138" font-size="11.5" fill="#475569">menus, shortcuts, file dialogs</text>
+    <text x="295" y="154" font-size="11.5" fill="#475569">open · merge · add · password prompt</text>
+    <text x="295" y="170" font-size="11.5" fill="#475569">save · copy · extract · JPG</text>
 
-    <text x="535" y="94" font-size="14" font-weight="700">PageView + PageDelegate</text>
-    <text x="535" y="114" font-size="11.5" fill="#475569">thumbnail grid, selection, clipboard</text>
-    <text x="535" y="130" font-size="11.5" fill="#475569">drag to reorder, drop PDFs, page marks</text>
+    <text x="580" y="119" font-size="14" font-weight="700">PageView + PageDelegate</text>
+    <text x="580" y="138" font-size="11.5" fill="#475569">thumbnail grid, selection, clipboard</text>
+    <text x="580" y="154" font-size="11.5" fill="#475569">drag to reorder, drop PDFs</text>
+    <text x="580" y="170" font-size="11.5" fill="#475569">page marks, thumbnail zoom</text>
 
-    <text x="770" y="94" font-size="14" font-weight="700">PreviewPane</text>
-    <text x="770" y="114" font-size="11.5" fill="#475569">one page, large</text>
-    <text x="770" y="130" font-size="11.5" fill="#475569">zoom, fit width / page</text>
+    <text x="825" y="119" font-size="14" font-weight="700">PreviewPane</text>
+    <text x="825" y="138" font-size="11.5" fill="#475569">one page, large</text>
+    <text x="825" y="154" font-size="11.5" fill="#475569">zoom 25–400%</text>
+    <text x="825" y="170" font-size="11.5" fill="#475569">fit width / fit page</text>
 
-    <text x="930" y="94" font-size="14" font-weight="700">HelpDialog</text>
-    <text x="930" y="114" font-size="11.5" fill="#475569">F1: shortcuts</text>
-    <text x="930" y="130" font-size="11.5" fill="#475569">and version</text>
+    <text x="995" y="119" font-size="14" font-weight="700">HelpDialog</text>
+    <text x="995" y="138" font-size="11.5" fill="#475569">F1: shortcuts</text>
+    <text x="995" y="154" font-size="11.5" fill="#475569">and version</text>
 
-    <text x="390" y="268" font-size="14" font-weight="700">Commands on a QUndoStack</text>
-    <text x="390" y="288" font-size="11" fill="#475569">InsertPages · DeletePages · MovePages · RotatePages</text>
+    <text x="495" y="312" font-size="14" font-weight="700">Commands on a QUndoStack</text>
+    <text x="495" y="330" font-size="11" fill="#475569">InsertPages · DeletePages · MovePages · RotatePages</text>
+    <text x="495" y="345" font-size="11" fill="#475569">every edit can be undone</text>
 
-    <text x="760" y="268" font-size="14" font-weight="700">PageListModel</text>
-    <text x="760" y="288" font-size="11.5" fill="#475569">list of PageRef(source, index, rotation, marked)</text>
+    <text x="890" y="312" font-size="14" font-weight="700">PageListModel</text>
+    <text x="890" y="330" font-size="11" fill="#475569">list of PageRef(source, index, rotation, marked)</text>
+    <text x="890" y="345" font-size="11" fill="#475569">the only thing an edit changes</text>
 
-    <text x="380" y="428" font-size="14" font-weight="700">SaveJob</text>
-    <text x="380" y="448" font-size="11.5" fill="#475569">pdfio/saver.py · pikepdf · copies pages without re-encoding</text>
+    <text x="390" y="482" font-size="14" font-weight="700">SaveJob</text>
+    <text x="390" y="500" font-size="11.5" fill="#475569">pdfio/saver.py · pikepdf · progress and cancel</text>
+    <text x="390" y="515" font-size="11.5" fill="#475569">copies the listed pages without re-encoding them</text>
 
-    <text x="860" y="428" font-size="14" font-weight="700">Thumbnailer</text>
-    <text x="860" y="448" font-size="11.5" fill="#475569">render/thumbnailer.py · pypdfium2 · LRU thumbnail cache</text>
+    <text x="930" y="482" font-size="14" font-weight="700">Thumbnailer</text>
+    <text x="930" y="500" font-size="11.5" fill="#475569">render/thumbnailer.py · pypdfium2 · the only thread that calls PDFium</text>
+    <text x="930" y="515" font-size="11.5" fill="#475569">opens files, with a password if needed · LRU thumbnail cache</text>
 
-    <text x="380" y="577" font-size="14" font-weight="700">Output PDF</text>
-    <text x="380" y="594" font-size="11.5" fill="#475569">the original, a new file or a copy · intact if the save fails</text>
+    <text x="390" y="648" font-size="14" font-weight="700">Output PDF</text>
+    <text x="390" y="666" font-size="11.5" fill="#475569">the original, a new file, a copy or the extracted pages</text>
+    <text x="390" y="681" font-size="11.5" fill="#475569">written without a password · intact if the save fails</text>
 
-    <text x="760" y="577" font-size="14" font-weight="700">Source PDFs</text>
-    <text x="760" y="594" font-size="11.5" fill="#475569">never modified while editing</text>
+    <text x="810" y="648" font-size="14" font-weight="700">Source PDFs</text>
+    <text x="810" y="666" font-size="11.5" fill="#475569">never modified while editing</text>
+    <text x="810" y="681" font-size="11.5" fill="#475569">may be password-protected</text>
 
-    <text x="970" y="577" font-size="14" font-weight="700">JPG images</text>
-    <text x="970" y="594" font-size="11.5" fill="#475569">selected pages, 200 DPI</text>
+    <text x="1050" y="648" font-size="14" font-weight="700">JPG images</text>
+    <text x="1050" y="666" font-size="11.5" fill="#475569">the selected pages</text>
+    <text x="1050" y="681" font-size="11.5" fill="#475569">200 DPI, as rotated on screen</text>
   </g>
 
-  <!-- flows -->
-  <g fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#arrow)">
-    <path d="M490,150 V238"/>
-    <path d="M540,275 H618"/>
-    <path d="M640,240 V152"/>
-    <path d="M210,150 V398"/>
-    <path d="M1010,170 V398"/>
-    <path d="M1040,400 V172"/>
-    <path d="M280,470 V553"/>
-    <path d="M760,555 V472"/>
-    <path d="M970,470 V553"/>
-    <path d="M660,580 H620 V435 H582"/>
+  <!-- edit flow -->
+  <g fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#edit)">
+    <path d="M560,180 V283"/>
+    <path d="M660,320 H738"/>
+    <path d="M780,285 V228 H690 V182"/>
   </g>
-  <g font-size="11.5" fill="#334155">
-    <text x="482" y="189" text-anchor="end">undoable edits</text>
-    <text x="648" y="189">change signals</text>
-    <text x="580" y="267" text-anchor="middle">mutate</text>
-    <text x="220" y="349">snapshot of the page list on save</text>
-    <text x="1002" y="349" text-anchor="end">render and export requests</text>
-    <text x="1048" y="349">results</text>
-    <text x="290" y="509">write .tmp, then replace</text>
-    <text x="612" y="509" text-anchor="end">copy pages</text>
-    <text x="770" y="509">read pages</text>
-    <text x="980" y="509">write JPG</text>
+  <g font-size="11.5" fill="#1d4ed8">
+    <text x="552" y="231" text-anchor="end">undoable edits</text>
+    <text x="699" y="311" text-anchor="middle">mutate</text>
+    <text x="790" y="231">change signals</text>
+  </g>
+
+  <!-- open and render flow -->
+  <g fill="none" stroke="#c2410c" stroke-width="1.8" marker-end="url(#render)">
+    <path d="M1100,200 V453"/>
+    <path d="M1140,455 V202"/>
+    <path d="M810,622 V527"/>
+    <path d="M1050,525 V620"/>
+  </g>
+  <g font-size="11.5" fill="#9a3412">
+    <text x="1092" y="392" text-anchor="end">requests: open, thumbnail,</text>
+    <text x="1092" y="407" text-anchor="end">preview, JPG</text>
+    <text x="1092" y="223" text-anchor="end">results: page counts, images,</text>
+    <text x="1092" y="238" text-anchor="end">"password needed"</text>
+    <text x="820" y="578">read pages</text>
+    <text x="1060" y="578">write JPG</text>
+  </g>
+
+  <!-- save flow -->
+  <g fill="none" stroke="#15803d" stroke-width="1.8" marker-end="url(#save)">
+    <path d="M230,180 V453"/>
+    <path d="M700,657 H655 V490 H612"/>
+    <path d="M300,525 V620"/>
+  </g>
+  <g font-size="11.5" fill="#166534">
+    <text x="240" y="392">snapshot of the page list</text>
+    <text x="240" y="407">(all pages or the selection) and passwords</text>
+    <text x="310" y="578">write .tmp, then replace</text>
+    <text x="647" y="578" text-anchor="end">copy pages</text>
   </g>
 </svg>

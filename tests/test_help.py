@@ -28,8 +28,8 @@ def test_f1_opens_the_help_with_the_version_and_shortcuts(app):
     window.close()
 
 
-def test_version_is_0_1_0_and_comes_from_the_package():
-    assert chobopdf.__version__ == "0.1.0"
+def test_version_is_0_1_1_and_comes_from_the_package():
+    assert chobopdf.__version__ == "0.1.1"
     pyproject = tomllib.loads(
         (Path(chobopdf.__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["project"]["dynamic"] == ["version"]
