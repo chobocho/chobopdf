@@ -195,5 +195,11 @@
   <li>검증: 단위 테스트 65개 통과. Edge 헤드리스로 SVG를 PNG로 렌더링하여 글자 겹침·잘림 없음 확인(화살표와 겹치던 라벨 1곳 수정). GitHub에서의 실제 표시와 exe 재빌드는 하지 않음. <code>.venv</code>에 설치된 패키지 메타데이터는 다시 설치하기 전까지 0.1.0으로 표시됨(앱 표시에는 영향 없음).</li>
   <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>는 포함하지 않음.</li>
 </ul>
+<h2>2026-10-10 exe 재빌드 (0.1.1)</h2>
+<ul>
+  <li><code>build_exe.bat</code>으로 <code>dist\ChoboPDF.exe</code>를 다시 빌드(약 57MB). 페이지 추출, 암호 걸린 PDF 열기, 버전 0.1.1이 포함된 소스 기준.</li>
+  <li>검증: 빌드한 exe를 화면 없는 모드로 띄워 10초간 정상 실행 확인 후 종료. 실제 창에서의 동작(제목의 버전, 암호 입력 창, 추출, JPG 저장)은 확인하지 않음.</li>
+  <li><code>dist/</code>는 git에서 제외되어 있어 커밋 대상 아님. 사용자 요청에 따라 이 이력을 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
+</ul>
 </body>
 </html>
