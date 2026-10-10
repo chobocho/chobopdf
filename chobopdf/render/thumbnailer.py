@@ -12,7 +12,7 @@ DEFAULT_CACHE_BYTES = 256 * 1024 * 1024
 
 
 class Thumbnailer(QObject):
-    """Opens PDFs and renders low-resolution page thumbnails off the UI thread.
+    """Opens PDFs and renders pages off the UI thread: cached thumbnails, plus one large preview.
 
     PDFium is not thread-safe, so every PDFium call happens on the single
     worker thread owned by this object.
@@ -21,6 +21,7 @@ class Thumbnailer(QObject):
     opened = Signal(object, int)  # path, page count
     openFailed = Signal(object, str)  # path, message
     thumbnailReady = Signal(object)  # key
+    previewReady = Signal(int, QImage)  # request token, image (null if the page failed)
 
     def __init__(self, render_px: int, cache_bytes: int = DEFAULT_CACHE_BYTES, parent=None):
         super().__init__(parent)
@@ -30,6 +31,7 @@ class Thumbnailer(QObject):
         # A null QImage marks a page that failed to render, so it is not retried forever.
         self._cache: OrderedDict[Key, QImage] = OrderedDict()
         self._wanted: deque[Key] = deque()
+        self._preview: tuple[int, Path, int, int, int] | None = None  # latest request only
         self._commands: deque[tuple[str, Path, threading.Event | None]] = deque()
         self._stop = False
         self._cond = threading.Condition()
@@ -71,6 +73,16 @@ class Thumbnailer(QObject):
         # Null marks a failed page. One pixel of slack covers rounding in the renderer.
         return image.isNull() or max(image.width(), image.height()) >= self._render_px - 1
 
+    def request_preview(self, token: int, path: Path, index: int, rotation: int,
+                        width_px: int) -> None:
+        """Render one page `width_px` wide, turned by `rotation`. Replaces any pending request.
+
+        The answer comes through previewReady with the same token. It is not cached.
+        """
+        with self._cond:
+            self._preview = (token, path, index, rotation, width_px)
+            self._cond.notify()
+
     def get(self, key: Key) -> QImage | None:
         with self._cond:
             image = self._cache.get(key)
@@ -92,15 +104,20 @@ class Thumbnailer(QObject):
     def _run(self) -> None:
         while True:
             with self._cond:
-                while not (self._stop or self._commands or self._wanted):
+                while not (self._stop or self._commands or self._preview or self._wanted):
                     self._cond.wait()
                 if self._stop:
                     break
+                key = preview = None
                 if self._commands:
                     command, path, done = self._commands.popleft()
-                    key = None
+                elif self._preview:  # what the user is waiting for goes before thumbnails
+                    preview, self._preview = self._preview, None
                 else:
                     key = self._wanted.popleft()
+            if preview is not None:
+                self._render_preview(*preview)
+                continue
             if key is not None:
                 self._render(key)
                 continue
@@ -136,17 +153,18 @@ class Thumbnailer(QObject):
             for key in [k for k in self._cache if k[0] == path]:
                 self._cache_bytes -= self._cache.pop(key).sizeInBytes()
 
-    def _render(self, key: Key) -> None:
-        path, index = key
+    def _render_image(self, path: Path, index: int, scale_for, rotation: int = 0,
+                      draw_annots: bool = False) -> QImage:
+        """Render a page; `scale_for(width, height)` picks the scale from its size in points."""
         try:
             page = self._doc(path)[index]
             try:
-                scale = self._render_px / max(page.get_size())
                 bitmap = page.render(
-                    scale=scale, may_draw_forms=False, draw_annots=False, prefer_bgrx=True
+                    scale=scale_for(*page.get_size()), rotation=rotation,
+                    may_draw_forms=False, draw_annots=draw_annots, prefer_bgrx=True
                 )
                 try:
-                    image = QImage(
+                    return QImage(
                         bitmap.buffer,
                         bitmap.width,
                         bitmap.height,
@@ -158,7 +176,18 @@ class Thumbnailer(QObject):
             finally:
                 page.close()
         except Exception:
-            image = QImage()
+            return QImage()
+
+    def _render_preview(self, token: int, path: Path, index: int, rotation: int,
+                        width_px: int) -> None:
+        def scale_for(width: float, height: float) -> float:
+            return width_px / (height if rotation % 180 == 90 else width)
+
+        self.previewReady.emit(
+            token, self._render_image(path, index, scale_for, rotation, draw_annots=True))
+
+    def _render(self, key: Key) -> None:
+        image = self._render_image(*key, lambda width, height: self._render_px / max(width, height))
         with self._cond:
             previous = self._cache.pop(key, None)
             if previous is not None:

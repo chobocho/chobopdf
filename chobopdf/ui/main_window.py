@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QKeySequence, QUndoStack
+from PySide6.QtGui import QAction, QKeySequence, QShortcut, QUndoStack
 from PySide6.QtWidgets import (QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressDialog,
-                               QSlider)
+                               QSlider, QSplitter)
 
 from chobopdf.model.commands import InsertPages
 from chobopdf.model.document import PageListModel, PageRef
@@ -14,6 +14,7 @@ from chobopdf.pdfio.saver import SaveJob
 from chobopdf.render.thumbnailer import Thumbnailer
 from chobopdf.ui.page_delegate import THUMB_SIZE
 from chobopdf.ui.page_view import MAX_ZOOM, MIN_ZOOM, PageView, pdf_paths
+from chobopdf.ui.preview_pane import PreviewPane
 
 APP_NAME = "ChoboPDF"
 MERGED_NAME = "병합 문서"
@@ -58,7 +59,18 @@ class MainWindow(QMainWindow):
         self._view = PageView(self._model, self._thumbnailer, self._undo_stack, self)
         self._view.filesDropped.connect(self._on_files_dropped)
 
-        self.setCentralWidget(self._view)
+        # Double-clicking a page splits the window and shows that page large on the right.
+        self._preview = PreviewPane(self._thumbnailer, self)
+        self._preview.hide()
+        self._preview.closeRequested.connect(self.close_preview)
+        self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        self._splitter.addWidget(self._view)
+        self._splitter.addWidget(self._preview)
+        self._splitter.setChildrenCollapsible(False)
+        self._view.doubleClicked.connect(self.open_preview)
+        QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self.close_preview)
+
+        self.setCentralWidget(self._splitter)
         self.setWindowTitle(APP_NAME)
         self.resize(1100, 800)
         self.setAcceptDrops(True)
@@ -116,6 +128,11 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(zoom_slider)
         self.statusBar().addPermanentWidget(zoom_label)
 
+        view.selectionModel().currentChanged.connect(self._update_preview)
+        for signal in (self._model.modelReset, self._model.rowsInserted, self._model.rowsRemoved,
+                       self._model.dataChanged):
+            signal.connect(self._update_preview)
+
         self._undo_stack.cleanChanged.connect(self._on_clean_changed)
         view.selectionModel().selectionChanged.connect(self._update_state)
         for signal in (self._model.modelReset, self._model.rowsInserted, self._model.rowsRemoved):
@@ -153,6 +170,29 @@ class MainWindow(QMainWindow):
         if selected:
             message += f" · {selected}쪽 선택"
         self.statusBar().showMessage(message)
+
+    # --- preview ---------------------------------------------------------
+
+    def open_preview(self, *_) -> None:
+        if self._preview.isHidden():
+            self._preview.show()
+            half = self._splitter.width() // 2
+            self._splitter.setSizes([half, half])
+        self._update_preview()
+
+    def close_preview(self) -> None:
+        self._preview.hide()
+        self._preview.show_page(None, 0)
+
+    def _update_preview(self, *_) -> None:
+        """Keep the preview on the current page while it is open."""
+        if self._preview.isHidden():
+            return
+        current = self._view.currentIndex()
+        if current.isValid():
+            self._preview.show_page(self._model.page(current.row()), current.row() + 1)
+        else:
+            self._preview.show_page(None, 0)
 
     # --- opening ---------------------------------------------------------
 
