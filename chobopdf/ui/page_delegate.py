@@ -1,5 +1,5 @@
-from PySide6.QtCore import QRectF, QSize, QSizeF, Qt
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtCore import QPointF, QRectF, QSize, QSizeF, Qt
+from PySide6.QtGui import QColor, QPainter, QPen, QPolygonF
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate
 
 from chobopdf.render.thumbnailer import Thumbnailer
@@ -17,6 +17,8 @@ CELL_SIZE = cell_size(THUMB_SIZE)
 
 _PLACEHOLDER_COLOR = QColor(225, 225, 225)
 _BORDER_COLOR = QColor(150, 150, 150)
+_MARK_COLOR = QColor(225, 29, 72)
+_MARK_EDGE_COLOR = QColor(255, 255, 255)
 
 
 class PageDelegate(QStyledItemDelegate):
@@ -59,8 +61,30 @@ class PageDelegate(QStyledItemDelegate):
         painter.drawRect(target)
         painter.restore()
 
+        if page.marked:
+            shown = size.transposed() if sideways else size
+            self._paint_mark(painter, box.center().x() + shown.width() / 2,
+                             box.center().y() - shown.height() / 2)
+
         role = option.palette.ColorRole.HighlightedText if selected else option.palette.ColorRole.Text
         painter.setPen(option.palette.color(role))
         label = QRectF(cell.x(), box.bottom() + 2, cell.width(), LABEL_HEIGHT)
         painter.drawText(label, Qt.AlignmentFlag.AlignCenter, str(index.row() + 1))
+        painter.restore()
+
+    def _paint_mark(self, painter: QPainter, right: float, top: float) -> None:
+        """Bookmark ribbon hanging over the top right corner of the page at (right, top)."""
+        width = max(16.0, self.thumb_size * 0.13)
+        height = width * 1.6
+        left = right - width - width * 0.35
+        top -= 4  # sticks out above the page, so it shows on a dark page too
+        ribbon = QPolygonF([QPointF(left, top), QPointF(left + width, top),
+                            QPointF(left + width, top + height),
+                            QPointF(left + width / 2, top + height - width * 0.45),
+                            QPointF(left, top + height)])
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(_MARK_EDGE_COLOR, 1.5))
+        painter.setBrush(_MARK_COLOR)
+        painter.drawPolygon(ribbon)
         painter.restore()

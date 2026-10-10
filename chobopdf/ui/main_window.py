@@ -1,6 +1,6 @@
 import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
         self._save_is_copy = False  # the running save leaves the open document as it is
         self._exporting: _Export | None = None
         self._scroll_after_open: int | None = None
+        self._marks_after_open: list[int] = []  # rows to mark again once a saved file is reopened
         self._help: HelpDialog | None = None
         self._thumbnailer = Thumbnailer(round(THUMB_SIZE * self.devicePixelRatioF()), parent=self)
         self._thumbnailer.opened.connect(self._on_opened)
@@ -138,6 +139,15 @@ class MainWindow(QMainWindow):
             self._add_action(edit_menu, "왼쪽으로 회전(&E)", "Shift+R", lambda: view.rotate_selected(-90)),
         ]
         edit_menu.addSeparator()
+        # Marks: a bookmark ribbon on the pages to keep track of while moving and deleting others.
+        self._selection_actions.append(
+            self._add_action(edit_menu, "표시 추가/삭제(&M)", "M", view.toggle_mark_selected))
+        self._mark_actions = [
+            self._add_action(edit_menu, "다음 표시로 이동(&N)", "N", lambda: view.go_to_mark(1)),
+            self._add_action(edit_menu, "이전 표시로 이동(&B)", "Shift+N", lambda: view.go_to_mark(-1)),
+            self._add_action(edit_menu, "표시 모두 지우기(&K)", "Ctrl+Shift+M", view.clear_marks),
+        ]
+        edit_menu.addSeparator()
         self._add_action(edit_menu, "모두 선택(&A)", QKeySequence.StandardKey.SelectAll, view.selectAll)
         view.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         view.addActions(edit_menu.actions())
@@ -188,6 +198,9 @@ class MainWindow(QMainWindow):
         for action in self._selection_actions:
             action.setEnabled(selected > 0)
         self._paste_action.setEnabled(self._view.can_paste())
+        marked = len(self._model.marked_rows())
+        for action in self._mark_actions:
+            action.setEnabled(marked > 0)
         self._add_pages_action.setEnabled(self._name is not None and not self._busy())
         can_save = self._model.rowCount() > 0 and not self._busy()
         self._save_action.setEnabled(can_save and self.isWindowModified())
@@ -202,6 +215,8 @@ class MainWindow(QMainWindow):
         message = f"{self._name} · {self._model.rowCount()}쪽"
         if selected:
             message += f" · {selected}쪽 선택"
+        if marked:
+            message += f" · 표시 {marked}쪽"
         self.statusBar().showMessage(message)
 
     def show_help(self) -> None:
@@ -301,7 +316,9 @@ class MainWindow(QMainWindow):
         previous, self._sources = self._sources, set(load.counts)
         self._undo_stack.clear()
         self._view.clear_clipboard()  # its pages may belong to a file being closed
-        self._model.set_pages(pages)
+        marks, self._marks_after_open = set(self._marks_after_open), []
+        self._model.set_pages([replace(page, marked=row in marks)
+                               for row, page in enumerate(pages)])
         self._view.scroll_to_row(self._scroll_after_open or 0)
         self._scroll_after_open = None
         for path in previous - self._sources:
@@ -450,6 +467,7 @@ class MainWindow(QMainWindow):
             return
         # Continue from the saved file: its pages are now in the edited order.
         self._scroll_after_open = self._view.top_row()
+        self._marks_after_open = self._model.marked_rows()  # same rows: the file is in this order
         self._load([dest])
 
     def _on_save_cancelled(self) -> None:

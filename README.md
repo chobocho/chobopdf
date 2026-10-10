@@ -11,6 +11,7 @@ The user interface is in Korean.
 ## Features
 
 - **Page editing**: drag to reorder, delete, rotate 90° left or right, cut/copy/paste, duplicate. Works on multi-page selections, and every edit can be undone.
+- **Page marks**: put a bookmark ribbon on the top right corner of the pages you are working around, so you do not lose track of them while moving and deleting others. A mark follows its page and is never written to the PDF.
 - **Merging files**: open several PDFs at once and they are joined in file-name order. Numbers are compared by value, so `2.pdf` comes before `10.pdf`.
 - **Adding a PDF**: insert the pages of another PDF into the open document. Drop a file from Explorer between two thumbnails to insert it there.
 - **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page.
@@ -72,8 +73,13 @@ The same commands are in the Edit menu and in the thumbnail context menu.
 | Delete | `Del` |
 | Rotate right / left | `R` / `Shift+R` |
 | Select all | `Ctrl+A` |
+| Mark / unmark the selected pages | `M` |
+| Go to the next / previous mark | `N` / `Shift+N` |
+| Clear all marks | `Ctrl+Shift+M` |
 | Reorder | Drag the selected thumbnails to the new position |
 | Thumbnail size | `Ctrl+wheel` over the thumbnails, or the status bar slider |
+
+Marks are only a reminder while editing: setting one does not count as a change and is not undone by `Ctrl+Z`. They stay on their pages through moves, undo and saving, are not copied to duplicated or pasted pages, and are gone once the file is closed.
 
 ### Preview
 

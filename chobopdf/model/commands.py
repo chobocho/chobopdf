@@ -42,6 +42,8 @@ class InsertPages(QUndoCommand):
         self._model.placed.emit(list(range(self._row, self._row + len(self._pages))))
 
     def undo(self) -> None:
+        # Taken back as they are now: a mark may have changed since they were inserted.
+        self._pages = [self._model.page(self._row + i) for i in range(len(self._pages))]
         self._model.remove(self._row, len(self._pages))
 
 
@@ -50,9 +52,10 @@ class DeletePages(QUndoCommand):
         super().__init__(text)
         self._model = model
         self._rows = sorted(rows)
-        self._pages = [model.page(row) for row in self._rows]
+        self._pages: list[PageRef] = []
 
     def redo(self) -> None:
+        self._pages = [self._model.page(row) for row in self._rows]
         _remove_rows(self._model, self._rows)
 
     def undo(self) -> None:
@@ -66,20 +69,21 @@ class MovePages(QUndoCommand):
         super().__init__("이동")
         self._model = model
         self._rows = sorted(rows)
-        self._pages = [model.page(row) for row in self._rows]
         self._dest = dest - sum(1 for row in self._rows if row < dest)
 
     def is_noop(self) -> bool:
         return self._rows == list(range(self._dest, self._dest + len(self._rows)))
 
     def redo(self) -> None:
+        pages = [self._model.page(row) for row in self._rows]
         _remove_rows(self._model, self._rows)
-        self._model.insert(self._dest, self._pages)
-        self._model.placed.emit(list(range(self._dest, self._dest + len(self._pages))))
+        self._model.insert(self._dest, pages)
+        self._model.placed.emit(list(range(self._dest, self._dest + len(pages))))
 
     def undo(self) -> None:
-        self._model.remove(self._dest, len(self._pages))
-        _restore_rows(self._model, self._rows, self._pages)
+        pages = [self._model.page(self._dest + i) for i in range(len(self._rows))]
+        self._model.remove(self._dest, len(pages))
+        _restore_rows(self._model, self._rows, pages)
 
 
 class RotatePages(QUndoCommand):

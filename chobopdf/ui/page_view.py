@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import (QItemSelection, QItemSelectionModel, QMimeData, QPoint, QRect, Qt, QTimer,
@@ -141,7 +142,7 @@ class PageView(QListView):
     def copy_selected(self) -> None:
         rows = self.selected_rows()
         if rows:
-            self._clipboard = [self.model().page(row) for row in rows]
+            self._clipboard = self._unmarked(rows)
 
     def cut_selected(self) -> None:
         self.copy_selected()
@@ -154,7 +155,11 @@ class PageView(QListView):
     def duplicate_selected(self) -> None:
         rows = self.selected_rows()
         if rows:
-            self._insert_after_selection([self.model().page(row) for row in rows], "복제")
+            self._insert_after_selection(self._unmarked(rows), "복제")
+
+    def _unmarked(self, rows: list[int]) -> list[PageRef]:
+        """The pages at `rows` for copying: a mark stays with the page it was put on."""
+        return [replace(self.model().page(row), marked=False) for row in rows]
 
     def _insert_after_selection(self, pages: list[PageRef], text: str) -> None:
         rows = self.selected_rows()
@@ -168,6 +173,31 @@ class PageView(QListView):
         command = MovePages(self.model(), rows, dest)
         if not command.is_noop():
             self._undo_stack.push(command)
+
+    # --- marks -----------------------------------------------------------
+
+    def toggle_mark_selected(self) -> None:
+        """Mark the selected pages, or unmark them if every one of them is marked already."""
+        rows = self.selected_rows()
+        if rows:
+            model = self.model()
+            model.set_marked(rows, not all(model.page(row).marked for row in rows))
+
+    def clear_marks(self) -> None:
+        self.model().set_marked(self.model().marked_rows(), False)
+
+    def go_to_mark(self, direction: int) -> None:
+        """Select the next (+1) or previous (-1) marked page from the current one, wrapping around."""
+        marked = self.model().marked_rows()
+        if not marked:
+            return
+        current = self.currentIndex()
+        row = current.row() if current.isValid() else -1
+        if direction > 0:
+            target = next((r for r in marked if r > row), marked[0])
+        else:
+            target = next((r for r in reversed(marked) if r < row), marked[-1])
+        self.select_page(target)
 
     def select_page(self, row: int) -> None:
         """Make `row` the only selected, current and visible page."""

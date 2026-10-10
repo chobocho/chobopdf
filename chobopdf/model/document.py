@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt, Signal
@@ -15,6 +15,9 @@ class PageRef:
     source: Path
     index: int
     rotation: int = 0  # extra clockwise rotation in degrees, multiple of 90
+    # A reminder for the person editing ("the page I am working around"). It is not part
+    # of the document: it is not saved, not undone, and two pages differing only in it are equal.
+    marked: bool = field(default=False, compare=False)
 
     @property
     def key(self) -> tuple[Path, int]:
@@ -68,6 +71,14 @@ class PageListModel(QAbstractListModel):
         self._pages[row] = page
         index = self.index(row)
         self.dataChanged.emit(index, index)
+
+    def marked_rows(self) -> list[int]:
+        return [row for row, page in enumerate(self._pages) if page.marked]
+
+    def set_marked(self, rows: list[int], marked: bool) -> None:
+        for row in rows:
+            if self._pages[row].marked != marked:
+                self.replace(row, replace(self._pages[row], marked=marked))
 
     def set_pages(self, pages: list[PageRef]) -> None:
         self.beginResetModel()
