@@ -154,3 +154,41 @@ def test_save_asks_whether_to_overwrite_or_save_a_copy(window, source, tmp_path,
         assert calls == [(saved_to, False)]
     else:
         assert calls == []
+
+
+def test_extract_writes_only_the_selected_pages(window, source, tmp_path):
+    edit(window)  # [(110, 90), (120, 0), (130, 0), (140, 0), (100, 0)]
+    dest = tmp_path / "source_추출.pdf"
+    window.save_to(dest, rows=[0, 2, 4])
+    wait_for(window._save_job.finished)
+
+    assert read_pages(dest) == [(110, 90), (130, 0), (100, 0)]
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]  # original untouched
+    assert not dest.with_name(dest.name + ".tmp").exists()
+    assert window._document == source                              # the document stays open
+    assert window.isWindowModified()
+    assert window._model.rowCount() == len(WIDTHS)
+    assert "3쪽" in window.statusBar().currentMessage()
+
+
+def test_extract_asks_for_a_name_and_uses_the_selection(window, source, tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(window, "_choose_pdf_target",
+                        lambda title, suggested: (calls.append(suggested), tmp_path / "chosen.pdf")[1])
+    monkeypatch.setattr(window, "save_to",
+                        lambda dest, copy=False, rows=None: calls.append((dest.name, rows)))
+    assert not window._extract_action.isEnabled()                  # nothing selected yet
+    window._view._select_rows([3, 1])
+    assert window._extract_action.isEnabled()
+    window._extract_action.trigger()
+    assert calls == [source.with_name("source_추출.pdf"), ("chosen.pdf", [1, 3])]
+
+
+def test_extract_cannot_replace_a_file_that_is_open(window, source, monkeypatch):
+    warnings = []
+    monkeypatch.setattr("chobopdf.ui.main_window.QMessageBox.warning",
+                        lambda *args: warnings.append(args[2]))
+    window.save_to(source, rows=[0])
+    assert window._save_job is None
+    assert len(warnings) == 1
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]

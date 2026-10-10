@@ -168,5 +168,14 @@
   <li>검증: Edge 헤드리스로 SVG를 렌더링하여 글자 겹침·잘림 없음 확인. GitHub에서의 실제 표시는 미확인.</li>
   <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
 </ul>
+<h2>2026-10-10 선택한 페이지를 새 PDF로 추출</h2>
+<ul>
+  <li>사용: 페이지를 선택하고 파일 메뉴 또는 우클릭 메뉴의 "선택한 페이지를 PDF로 추출"(Ctrl+E). 저장할 이름을 묻고(기본 <code>원본이름_추출.pdf</code>, 병합 문서는 <code>병합_추출.pdf</code>) 선택한 페이지만 화면에 보이는 순서와 회전 상태대로 새 PDF에 씀.</li>
+  <li>동작: 사본으로 저장과 같은 경로를 사용. 열린 문서, 실행 취소 기록, 수정 표시(*)는 그대로이고, 진행률 표시·취소·임시 파일 교체도 동일. 현재 페이지를 읽어 오고 있는 파일 위에는 저장을 막음. 완료 시 상태 표시줄에 추출한 쪽수와 경로 표시.</li>
+  <li>구현: main_window.py의 <code>save_to</code>에 <code>rows</code> 인자를 추가(지정하면 그 페이지만 쓰고 항상 사본으로 처리), <code>_extract</code>와 메뉴 항목 추가. 열린 파일 보호 경고 문구를 사본·추출 공용으로 변경. saver.py는 변경 없음.</li>
+  <li>문서: 도움말(F1), README.md, README.ko.md에 Ctrl+E 반영. <code>docs/architecture.svg</code>는 갱신하지 않음.</li>
+  <li>검증: 단위 테스트 58개 통과(선택한 페이지만 기록되는지, 열린 문서 유지, 이름 제안과 선택 순서, 열린 파일 보호, 도움말의 Ctrl+E). 실제 화면에서의 메뉴·파일 대화상자 조작과 exe 재빌드는 하지 않음.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>는 포함하지 않음.</li>
+</ul>
 </body>
 </html>

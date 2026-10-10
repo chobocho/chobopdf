@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
         self._save_job: SaveJob | None = None
         self._save_dest: Path | None = None
         self._save_is_copy = False  # the running save leaves the open document as it is
+        self._save_extracted = 0  # pages the running save extracts; 0 when it writes the document
         self._exporting: _Export | None = None
         self._scroll_after_open: int | None = None
         self._marks_after_open: list[int] = []  # rows to mark again once a saved file is reopened
@@ -110,6 +111,8 @@ class MainWindow(QMainWindow):
         self._save_copy_action = self._add_action(
             file_menu, "사본으로 저장(&C)…", "Ctrl+Alt+S", self._save_copy)
         file_menu.addSeparator()
+        self._extract_action = self._add_action(
+            file_menu, "선택한 페이지를 PDF로 추출(&E)…", "Ctrl+E", self._extract)
         self._export_action = self._add_action(
             file_menu, "선택한 페이지를 JPG로 저장(&J)…", "Ctrl+J", self._choose_jpg_target)
         file_menu.addSeparator()
@@ -153,7 +156,7 @@ class MainWindow(QMainWindow):
         view.addActions(edit_menu.actions())
         separator = QAction(self)
         separator.setSeparator(True)
-        view.addActions([separator, self._export_action])
+        view.addActions([separator, self._extract_action, self._export_action])
 
         help_menu = self.menuBar().addMenu("도움말(&H)")
         self._add_action(help_menu, "도움말(&H)", "F1", self.show_help)
@@ -206,6 +209,7 @@ class MainWindow(QMainWindow):
         self._save_action.setEnabled(can_save and self.isWindowModified())
         self._save_as_action.setEnabled(can_save)
         self._save_copy_action.setEnabled(can_save)
+        self._extract_action.setEnabled(selected > 0 and not self._busy())
         self._export_action.setEnabled(selected > 0 and not self._busy())
         if self._loading is not None or self._exporting is not None:
             return  # keep the "opening" or "saving images" message
@@ -405,25 +409,38 @@ class MainWindow(QMainWindow):
         if path:
             self.save_to(path, copy=True)
 
-    def save_to(self, dest: Path, copy: bool = False) -> None:
+    def _extract(self) -> None:
+        rows = self._view.selected_rows()
+        if not rows or self._busy():
+            return
+        path = self._choose_pdf_target(f"선택한 {len(rows)}쪽을 PDF로 추출",
+                                       self._suggested_pdf("_추출"))
+        if path:
+            self.save_to(path, rows=rows)
+
+    def save_to(self, dest: Path, copy: bool = False, rows: list[int] | None = None) -> None:
         """Write the edited document to `dest` in the background, then switch to it.
 
         With `copy`, the open document stays as it is, unsaved changes included.
+        With `rows`, only those pages are written, and always as a copy.
         """
         if self._busy():
             return
+        copy = copy or rows is not None
         if copy and dest.resolve() in self._sources:
             # The pages on screen are read from that file; replacing it would scramble them.
             QMessageBox.warning(
                 self, APP_NAME,
-                f"열려 있는 파일에는 사본을 저장할 수 없습니다. 다른 이름을 선택하세요.\n{dest}")
+                f"열려 있는 파일 위에는 저장할 수 없습니다. 다른 이름을 선택하세요.\n{dest}")
             return
+        pages = self._model.pages() if rows is None else [self._model.page(row) for row in rows]
         self._save_is_copy = copy
+        self._save_extracted = 0 if rows is None else len(pages)
         self._save_dest = dest.resolve()
         # Written next to the target and swapped in at the end, so a failed
         # or cancelled save never damages an existing file.
         temp = self._save_dest.with_name(self._save_dest.name + ".tmp")
-        job = self._save_job = SaveJob(self._model.pages(), temp, self)
+        job = self._save_job = SaveJob(pages, temp, self)
 
         dialog = QProgressDialog(f"저장 중… {dest.name}", "취소", 0, 100, self)
         dialog.setWindowTitle(APP_NAME)
@@ -461,6 +478,9 @@ class MainWindow(QMainWindow):
         except OSError as e:
             temp.unlink(missing_ok=True)
             self._show_save_error(str(e))
+            return
+        if self._save_extracted:
+            self.statusBar().showMessage(f"{self._save_extracted}쪽을 추출했습니다: {dest}", 5000)
             return
         if self._save_is_copy:
             self.statusBar().showMessage(f"사본을 저장했습니다: {dest}", 5000)

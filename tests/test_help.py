@@ -20,7 +20,7 @@ def test_f1_opens_the_help_with_the_version_and_shortcuts(app):
     assert dialog is not None and dialog.isVisible()
     text = dialog.browser.toPlainText()
     assert f"ChoboPDF {chobopdf.__version__}" in text
-    for keys in ("Ctrl+O", "Ctrl+9", "Page Down", "F1"):
+    for keys in ("Ctrl+O", "Ctrl+E", "Ctrl+9", "Page Down", "F1"):
         assert keys in text
 
     QTest.keyClick(dialog, Qt.Key.Key_F1)                      # F1 again closes it
