@@ -12,6 +12,7 @@ DEFAULT_CACHE_BYTES = 256 * 1024 * 1024
 EXPORT_DPI = 200
 EXPORT_MAX_PX = 8000  # longest side of an exported image, so an oversized page cannot exhaust memory
 JPG_QUALITY = 90
+_PDFIUM_ERR_PASSWORD = 4  # FPDF_ERR_PASSWORD: the file needs a password, or the one given is wrong
 
 
 class Thumbnailer(QObject):
@@ -24,6 +25,7 @@ class Thumbnailer(QObject):
 
     opened = Signal(object, int)  # path, page count
     openFailed = Signal(object, str)  # path, message
+    passwordRequired = Signal(object)  # path: open it again with the right password
     thumbnailReady = Signal(object)  # key
     previewReady = Signal(int, QImage)  # request token, image (null if the page failed)
     exported = Signal(object, bool)  # image file, whether it was written
@@ -42,10 +44,17 @@ class Thumbnailer(QObject):
         self._stop = False
         self._cond = threading.Condition()
         self._docs: dict[Path, pdfium.PdfDocument] = {}  # worker thread only
+        self._passwords: dict[Path, str] = {}  # kept after close, for reopening on demand
         self._thread = threading.Thread(target=self._run, name="thumbnailer", daemon=True)
         self._thread.start()
 
-    def open(self, path: Path) -> None:
+    def open(self, path: Path, password: str | None = None) -> None:
+        """Open the file and answer through opened, openFailed or passwordRequired."""
+        with self._cond:
+            if password is None:
+                self._passwords.pop(path, None)
+            else:
+                self._passwords[path] = password
         self._post("open", path)
 
     def close(self, path: Path, wait: bool = False) -> None:
@@ -152,14 +161,19 @@ class Thumbnailer(QObject):
     def _doc(self, path: Path) -> pdfium.PdfDocument:
         doc = self._docs.get(path)
         if doc is None:
-            doc = self._docs[path] = pdfium.PdfDocument(path)
+            with self._cond:
+                password = self._passwords.get(path)
+            doc = self._docs[path] = pdfium.PdfDocument(path, password=password)
         return doc
 
     def _open(self, path: Path) -> None:
         try:
             count = len(self._doc(path))
         except Exception as e:
-            self.openFailed.emit(path, str(e))
+            if getattr(e, "err_code", None) == _PDFIUM_ERR_PASSWORD:
+                self.passwordRequired.emit(path)
+            else:
+                self.openFailed.emit(path, str(e))
             return
         self.opened.emit(path, count)
 

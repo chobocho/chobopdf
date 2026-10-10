@@ -5,8 +5,8 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QShortcut, QUndoStack
-from PySide6.QtWidgets import (QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressDialog,
-                               QSlider, QSplitter)
+from PySide6.QtWidgets import (QFileDialog, QInputDialog, QLabel, QLineEdit, QMainWindow,
+                               QMessageBox, QProgressDialog, QSlider, QSplitter)
 
 from chobopdf import __version__
 from chobopdf.model.commands import InsertPages
@@ -42,6 +42,8 @@ class _Load:
     remaining: int
     counts: dict[Path, int] = field(default_factory=dict)
     failures: list[tuple[Path, str]] = field(default_factory=list)
+    locked: list[Path] = field(default_factory=list)  # files waiting for their password
+    asking: bool = False  # a password prompt is open
 
 
 @dataclass
@@ -60,6 +62,7 @@ class MainWindow(QMainWindow):
         self._document: Path | None = None  # file that Save writes to; None for a merged document
         self._name: str | None = None  # shown in the title; None while nothing is open
         self._sources: set[Path] = set()  # files the thumbnailer holds open
+        self._passwords: dict[Path, str] = {}  # of the protected files among them
         self._loading: _Load | None = None
         self._merge_folder: Path | None = None  # where Save As starts for a merged document
         self._save_job: SaveJob | None = None
@@ -73,6 +76,7 @@ class MainWindow(QMainWindow):
         self._thumbnailer = Thumbnailer(round(THUMB_SIZE * self.devicePixelRatioF()), parent=self)
         self._thumbnailer.opened.connect(self._on_opened)
         self._thumbnailer.openFailed.connect(self._on_open_failed)
+        self._thumbnailer.passwordRequired.connect(self._on_password_required)
         self._thumbnailer.exported.connect(self._on_exported)
         self._model = PageListModel(self)
         self._undo_stack = QUndoStack(self)
@@ -285,7 +289,7 @@ class MainWindow(QMainWindow):
         self._update_state()
         self.statusBar().showMessage(f"여는 중… {paths[0].name}")
         for path in paths:
-            self._thumbnailer.open(path)
+            self._thumbnailer.open(path, self._passwords.get(path))
 
     def _on_opened(self, path: Path, page_count: int) -> None:
         if self._loading is not None:
@@ -296,6 +300,33 @@ class MainWindow(QMainWindow):
         if self._loading is not None:
             self._loading.failures.append((path, message))
             self._on_load_progress()
+
+    def _on_password_required(self, path: Path) -> None:
+        load = self._loading
+        if load is None:
+            return
+        load.locked.append(path)
+        if load.asking:  # one prompt at a time; this file is asked about next
+            return
+        load.asking = True
+        while load.locked:
+            path = load.locked.pop(0)
+            # A password we already have was the one just refused.
+            password = self._ask_password(path, retry=self._passwords.pop(path, None) is not None)
+            if password is None:
+                load.failures.append((path, "암호를 입력하지 않아 열지 않았습니다."))
+                self._on_load_progress()
+            else:
+                self._passwords[path] = password
+                self._thumbnailer.open(path, password)
+        load.asking = False
+
+    def _ask_password(self, path: Path, retry: bool) -> str | None:
+        """Ask for the password of a protected file; None if the user gives up."""
+        prompt = "암호가 맞지 않습니다. 다시 입력하세요." if retry else "암호가 걸린 PDF입니다. 암호를 입력하세요."
+        password, ok = QInputDialog.getText(self, APP_NAME, f"{prompt}\n{path.name}",
+                                            QLineEdit.EchoMode.Password)
+        return password if ok else None
 
     def _on_load_progress(self) -> None:
         load = self._loading
@@ -327,6 +358,8 @@ class MainWindow(QMainWindow):
         self._scroll_after_open = None
         for path in previous - self._sources:
             self._thumbnailer.close(path)
+        self._passwords = {path: password for path, password in self._passwords.items()
+                           if path in self._sources}
         if len(load.paths) == 1:
             self._document = load.paths[0]
             self._name = self._document.name
@@ -440,7 +473,7 @@ class MainWindow(QMainWindow):
         # Written next to the target and swapped in at the end, so a failed
         # or cancelled save never damages an existing file.
         temp = self._save_dest.with_name(self._save_dest.name + ".tmp")
-        job = self._save_job = SaveJob(pages, temp, self)
+        job = self._save_job = SaveJob(pages, temp, self, self._passwords)
 
         dialog = QProgressDialog(f"저장 중… {dest.name}", "취소", 0, 100, self)
         dialog.setWindowTitle(APP_NAME)
@@ -479,6 +512,7 @@ class MainWindow(QMainWindow):
             temp.unlink(missing_ok=True)
             self._show_save_error(str(e))
             return
+        self._passwords.pop(dest, None)  # the file just written has no password
         if self._save_extracted:
             self.statusBar().showMessage(f"{self._save_extracted}쪽을 추출했습니다: {dest}", 5000)
             return

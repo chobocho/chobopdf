@@ -16,13 +16,17 @@ class SaveCancelled(Exception):
 
 def write_pdf(pages: list[PageRef], dest: Path,
               progress: Callable[[int], None] = lambda percent: None,
-              is_cancelled: Callable[[], bool] = lambda: False) -> None:
+              is_cancelled: Callable[[], bool] = lambda: False,
+              passwords: dict[Path, str] | None = None) -> None:
     """Write `pages` to a new PDF at `dest`.
 
     Page contents are copied as they are, without re-encoding. Document-level
     data that no longer matches the new page order (bookmarks, form fields) is
-    not carried over.
+    not carried over. `passwords` opens the protected sources; the new file
+    has no password.
     """
+    passwords = passwords or {}
+
     def check() -> None:
         if is_cancelled():
             raise SaveCancelled
@@ -38,7 +42,8 @@ def write_pdf(pages: list[PageRef], dest: Path,
             check()
             source = sources.get(ref.source)
             if source is None:
-                source = sources[ref.source] = pikepdf.open(ref.source)
+                source = sources[ref.source] = pikepdf.open(
+                    ref.source, password=passwords.get(ref.source, ""))
                 if done == 0:
                     info = source.trailer.get("/Info")
                     if info is not None and info.is_indirect:
@@ -67,10 +72,12 @@ class SaveJob(QObject):
     cancelled = Signal()
     failed = Signal(str)
 
-    def __init__(self, pages: list[PageRef], dest: Path, parent=None):
+    def __init__(self, pages: list[PageRef], dest: Path, parent=None,
+                 passwords: dict[Path, str] | None = None):
         super().__init__(parent)
         self._pages = pages
         self._dest = dest
+        self._passwords = dict(passwords or {})
         self._cancel = threading.Event()
         self._thread = threading.Thread(target=self._run, name="save", daemon=True)
 
@@ -85,7 +92,8 @@ class SaveJob(QObject):
 
     def _run(self) -> None:
         try:
-            write_pdf(self._pages, self._dest, self.progress.emit, self._cancel.is_set)
+            write_pdf(self._pages, self._dest, self.progress.emit, self._cancel.is_set,
+                      self._passwords)
         except SaveCancelled:
             self._dest.unlink(missing_ok=True)
             self.cancelled.emit()

@@ -14,6 +14,7 @@ The user interface is in Korean.
 - **Page marks**: put a bookmark ribbon on the top right corner of the pages you are working around, so you do not lose track of them while moving and deleting others. A mark follows its page and is never written to the PDF.
 - **Merging files**: open several PDFs at once and they are joined in file-name order. Numbers are compared by value, so `2.pdf` comes before `10.pdf`.
 - **Adding a PDF**: insert the pages of another PDF into the open document. Drop a file from Explorer between two thumbnails to insert it there.
+- **Password-protected PDFs**: asks for the password when opening, and again if it is wrong. The same goes for files being merged or added.
 - **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page.
 - **Thumbnail zoom**: 100–200%, with the status bar slider or Ctrl+wheel.
 - **Save as a copy**: saving an opened file asks whether to overwrite it or save a copy. A copy is written to another file while you keep working on the original.
@@ -103,6 +104,8 @@ The zoom, fit and page keys work once the preview has the focus, so click it fir
 ## Limitations
 
 - Bookmarks (outline) and form fields are not kept in the saved file, because they no longer match once the page order changes.
+- Saved files have no password. Overwriting a protected original leaves it unprotected, and so are extracted pages and copies.
+- A file whose password prompt is cancelled is not opened; when several files are being opened, the rest still are.
 - Document information (title, author, ...) is taken from the source file of the first page.
 - Saving reopens the saved file, which clears the undo history.
 

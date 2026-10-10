@@ -177,5 +177,15 @@
   <li>검증: 단위 테스트 58개 통과(선택한 페이지만 기록되는지, 열린 문서 유지, 이름 제안과 선택 순서, 열린 파일 보호, 도움말의 Ctrl+E). 실제 화면에서의 메뉴·파일 대화상자 조작과 exe 재빌드는 하지 않음.</li>
   <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>는 포함하지 않음.</li>
 </ul>
+<h2>2026-10-10 암호 걸린 PDF 열기</h2>
+<ul>
+  <li>사용: 암호가 걸린 PDF를 열면 암호 입력 창이 뜨고, 틀리면 "암호가 맞지 않습니다"로 다시 물어봄. 열기·병합·PDF 추가·끌어다 놓기 모두 같은 방식. 여러 파일에 암호가 있으면 한 번에 하나씩 물어봄.</li>
+  <li>입력을 취소하면 그 파일만 건너뛰고 나머지를 열며, 열지 못한 파일은 경고로 알림. 같은 창에서 이미 연 파일은 다시 묻지 않음.</li>
+  <li>저장: 암호가 걸린 원본에서 페이지를 읽어 저장·사본 저장·추출 가능. <b>저장한 파일에는 암호가 걸리지 않음</b>(원본을 덮어쓰면 암호 없는 파일이 됨). 암호 유지 저장은 구현하지 않음.</li>
+  <li>구현: thumbnailer.py에 <code>open(path, password)</code>와 <code>passwordRequired</code> 신호 추가(PDFium 오류 코드 4로 판별, 닫은 뒤 다시 열 때를 위해 암호 보관). saver.py의 <code>write_pdf</code>/<code>SaveJob</code>에 <code>passwords</code> 인자 추가. main_window.py에 암호 보관(<code>_passwords</code>, 메모리에만 있고 파일을 닫으면 삭제), <code>_on_password_required</code>, <code>_ask_password</code> 추가.</li>
+  <li>문서: 도움말(F1) 참고, README.md, README.ko.md의 기능과 제한 사항에 반영.</li>
+  <li>검증: 단위 테스트 65개 통과(<code>tests/test_password.py</code> 7개 추가: 암호 요구와 재시도, 닫은 뒤 다시 열기, 암호 없는 저장, 취소 시 나머지 병합, 덮어쓰기 후 재열기, 추출). 소유자 암호만 걸린 파일은 암호 없이 열리는 것을 별도 스크립트로 확인. 실제 암호 입력 창 조작과 exe 재빌드는 하지 않음.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>는 포함하지 않음.</li>
+</ul>
 </body>
 </html>
