@@ -12,6 +12,7 @@ def test_f1_opens_the_help_with_the_version_and_shortcuts(app):
     window = MainWindow()
     window.show()
     QTest.qWaitForWindowExposed(window)
+    assert window.windowTitle() == f"ChoboPDF {chobopdf.__version__}"
     QTest.keyClick(window, Qt.Key.Key_F1)
     app.processEvents()
 

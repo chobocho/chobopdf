@@ -5,6 +5,7 @@ import pytest
 from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
 from PySide6.QtGui import QDropEvent
 
+import chobopdf
 from chobopdf.model.document import PageRef
 from chobopdf.ui.main_window import MERGED_NAME, MainWindow, natural_sorted
 from chobopdf.ui.page_delegate import CELL_SIZE
@@ -56,6 +57,7 @@ def test_opening_several_files_merges_them_in_order(window, files, tmp_path):
     assert sources(window) == [("b", 0), ("b", 1), ("b", 2), ("a", 0), ("a", 1), ("c", 0)]
     assert window._document is None
     assert MERGED_NAME in window.windowTitle()
+    assert window.windowTitle().endswith(f"ChoboPDF {chobopdf.__version__}")
     assert window.isWindowModified()  # nothing is saved yet
 
     dest = tmp_path / "merged.pdf"

@@ -9,10 +9,14 @@ from PySide6.QtGui import QImage
 Key = tuple[Path, int]
 
 DEFAULT_CACHE_BYTES = 256 * 1024 * 1024
+EXPORT_DPI = 200
+EXPORT_MAX_PX = 8000  # longest side of an exported image, so an oversized page cannot exhaust memory
+JPG_QUALITY = 90
 
 
 class Thumbnailer(QObject):
-    """Opens PDFs and renders pages off the UI thread: cached thumbnails, plus one large preview.
+    """Opens PDFs and renders pages off the UI thread: cached thumbnails, one large preview,
+    and pages saved as image files.
 
     PDFium is not thread-safe, so every PDFium call happens on the single
     worker thread owned by this object.
@@ -22,6 +26,7 @@ class Thumbnailer(QObject):
     openFailed = Signal(object, str)  # path, message
     thumbnailReady = Signal(object)  # key
     previewReady = Signal(int, QImage)  # request token, image (null if the page failed)
+    exported = Signal(object, bool)  # image file, whether it was written
 
     def __init__(self, render_px: int, cache_bytes: int = DEFAULT_CACHE_BYTES, parent=None):
         super().__init__(parent)
@@ -32,6 +37,7 @@ class Thumbnailer(QObject):
         self._cache: OrderedDict[Key, QImage] = OrderedDict()
         self._wanted: deque[Key] = deque()
         self._preview: tuple[int, Path, int, int, int] | None = None  # latest request only
+        self._exports: deque[tuple[Path, int, int, Path]] = deque()
         self._commands: deque[tuple[str, Path, threading.Event | None]] = deque()
         self._stop = False
         self._cond = threading.Condition()
@@ -83,6 +89,12 @@ class Thumbnailer(QObject):
             self._preview = (token, path, index, rotation, width_px)
             self._cond.notify()
 
+    def export_jpg(self, path: Path, index: int, rotation: int, dest: Path) -> None:
+        """Save one page, turned by `rotation`, as a JPEG at EXPORT_DPI. Answers through exported."""
+        with self._cond:
+            self._exports.append((path, index, rotation, dest))
+            self._cond.notify()
+
     def get(self, key: Key) -> QImage | None:
         with self._cond:
             image = self._cache.get(key)
@@ -104,19 +116,25 @@ class Thumbnailer(QObject):
     def _run(self) -> None:
         while True:
             with self._cond:
-                while not (self._stop or self._commands or self._preview or self._wanted):
+                while not (self._stop or self._commands or self._preview or self._exports
+                           or self._wanted):
                     self._cond.wait()
                 if self._stop:
                     break
-                key = preview = None
+                key = preview = export = None
                 if self._commands:
                     command, path, done = self._commands.popleft()
                 elif self._preview:  # what the user is waiting for goes before thumbnails
                     preview, self._preview = self._preview, None
+                elif self._exports:
+                    export = self._exports.popleft()
                 else:
                     key = self._wanted.popleft()
             if preview is not None:
                 self._render_preview(*preview)
+                continue
+            if export is not None:
+                self._export(*export)
                 continue
             if key is not None:
                 self._render(key)
@@ -185,6 +203,13 @@ class Thumbnailer(QObject):
 
         self.previewReady.emit(
             token, self._render_image(path, index, scale_for, rotation, draw_annots=True))
+
+    def _export(self, path: Path, index: int, rotation: int, dest: Path) -> None:
+        def scale_for(width: float, height: float) -> float:
+            return min(EXPORT_DPI / 72, EXPORT_MAX_PX / max(width, height))
+
+        image = self._render_image(path, index, scale_for, rotation, draw_annots=True)
+        self.exported.emit(dest, not image.isNull() and image.save(str(dest), "JPG", JPG_QUALITY))
 
     def _render(self, key: Key) -> None:
         image = self._render_image(*key, lambda width, height: self._render_px / max(width, height))

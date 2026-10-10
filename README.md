@@ -15,6 +15,8 @@ The user interface is in Korean.
 - **Adding a PDF**: insert the pages of another PDF into the open document. Drop a file from Explorer between two thumbnails to insert it there.
 - **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page.
 - **Thumbnail zoom**: 100–200%, with the status bar slider or Ctrl+wheel.
+- **Save as a copy**: saving an opened file asks whether to overwrite it or save a copy. A copy is written to another file while you keep working on the original.
+- **Pages as JPG**: right-click the selected pages to save them as JPG images (200 DPI), in the rotation shown.
 - **Safe saving**: the file is written in the background to a temporary file that then replaces the target, so a failed or cancelled save leaves the existing file untouched. Shows progress and can be cancelled.
 
 ## Install and run
@@ -46,11 +48,17 @@ Uses PyInstaller to build `dist\ChoboPDF.exe` (one file, no console window). Nee
 | Open | `Ctrl+O`, or drop a PDF on the window |
 | Merge several files | `Ctrl+M`, or select several files in Open |
 | Add a PDF to the open document | `Ctrl+I` (after the selected pages, or at the end if nothing is selected), or drop it between thumbnails |
-| Save (overwrites the original, after a confirmation) | `Ctrl+S` |
-| Save as | `Ctrl+Shift+S` |
+| Save (asks: overwrite the original, or save a copy) | `Ctrl+S` |
+| Save as (continues in the new file) | `Ctrl+Shift+S` |
+| Save a copy (the open document stays as it is) | `Ctrl+Alt+S` |
+| Save the selected pages as JPG | `Ctrl+J`, or right-click the pages |
 | Quit | `Ctrl+Q` |
 
 A merged document has no file of its own yet, so `Ctrl+S` asks for a name.
+
+Saving a copy does not count as saving the document: the title keeps its `*` until the document itself is saved. A copy cannot be written over a file whose pages are currently open.
+
+With one page selected, JPG export asks for a file name; with several, it asks for a folder and names the files `<document>_<page number>.jpg`.
 
 ### Editing pages
 

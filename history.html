@@ -142,5 +142,15 @@
   <li>검증: <code>.venv</code>를 새로 만들어 의존성 설치, 단위 테스트 40개 통과(F1 열기/닫기, 버전, Ctrl+9 추가). 도움말 창 화면 캡처 확인. 실제 키보드 조작과 exe 재빌드는 하지 않음.</li>
   <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
 </ul>
+<h2>2026-10-10 제목에 버전, 사본으로 저장, 페이지 JPG 저장</h2>
+<ul>
+  <li>제목: 창 제목에 버전 표시 (<code>ChoboPDF 0.1.0</code>, 문서를 열면 <code>파일명 - ChoboPDF 0.1.0</code>).</li>
+  <li>사본으로 저장: Ctrl+S를 누르면 "덮어쓰기 / 사본으로 저장 / 취소"를 물어봄(Enter 기본값은 사본). 파일 메뉴에 사본으로 저장(Ctrl+Alt+S) 추가. 기본 이름은 <code>원본이름_사본.pdf</code>.</li>
+  <li>사본 저장 후에도 열린 문서와 실행 취소 기록, 수정 표시(*)는 그대로 유지. 현재 페이지를 읽어 오고 있는 파일 위에는 사본 저장을 막음(페이지가 뒤섞이는 것 방지).</li>
+  <li>JPG 저장: 선택한 페이지 우클릭 메뉴 또는 파일 메뉴(Ctrl+J). 한 쪽이면 파일 이름, 여러 쪽이면 폴더를 묻고 <code>문서이름_쪽번호.jpg</code>로 저장. 200 DPI, 품질 90, 긴 변 최대 8000px, 회전 상태 반영. 폴더에 같은 이름이 있으면 덮어쓰기 확인.</li>
+  <li>변경: thumbnailer.py(export_jpg, exported 신호: PDFium 호출은 기존 작업 스레드에서만), main_window.py, help_dialog.py, README.md, README.ko.md.</li>
+  <li>검증: 단위 테스트 49개 통과(사본 저장, 열린 파일 보호, 저장 선택 분기, JPG 크기·회전·파일명·실패 보고, 제목). 저장 선택 대화상자 화면 캡처 확인. 실제 마우스 우클릭 조작과 exe 재빌드(JPG 플러그인 포함 여부)는 확인하지 않음.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
+</ul>
 </body>
 </html>

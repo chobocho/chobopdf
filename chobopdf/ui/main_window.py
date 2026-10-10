@@ -8,6 +8,7 @@ from PySide6.QtGui import QAction, QKeySequence, QShortcut, QUndoStack
 from PySide6.QtWidgets import (QFileDialog, QLabel, QMainWindow, QMessageBox, QProgressDialog,
                                QSlider, QSplitter)
 
+from chobopdf import __version__
 from chobopdf.model.commands import InsertPages
 from chobopdf.model.document import PageListModel, PageRef
 from chobopdf.pdfio.saver import SaveJob
@@ -18,8 +19,10 @@ from chobopdf.ui.page_view import MAX_ZOOM, MIN_ZOOM, PageView, pdf_paths
 from chobopdf.ui.preview_pane import PreviewPane
 
 APP_NAME = "ChoboPDF"
+APP_TITLE = f"{APP_NAME} {__version__}"  # shown in the title bar
 MERGED_NAME = "병합 문서"
 _PDF_FILTER = "PDF 파일 (*.pdf)"
+_JPG_FILTER = "JPEG 이미지 (*.jpg)"
 
 
 def natural_sorted(paths: list[Path]) -> list[Path]:
@@ -41,6 +44,16 @@ class _Load:
     failures: list[tuple[Path, str]] = field(default_factory=list)
 
 
+@dataclass
+class _Export:
+    """A batch of pages being saved as images by the thumbnailer."""
+
+    total: int
+    folder: Path
+    remaining: int
+    failures: list[Path] = field(default_factory=list)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -51,11 +64,14 @@ class MainWindow(QMainWindow):
         self._merge_folder: Path | None = None  # where Save As starts for a merged document
         self._save_job: SaveJob | None = None
         self._save_dest: Path | None = None
+        self._save_is_copy = False  # the running save leaves the open document as it is
+        self._exporting: _Export | None = None
         self._scroll_after_open: int | None = None
         self._help: HelpDialog | None = None
         self._thumbnailer = Thumbnailer(round(THUMB_SIZE * self.devicePixelRatioF()), parent=self)
         self._thumbnailer.opened.connect(self._on_opened)
         self._thumbnailer.openFailed.connect(self._on_open_failed)
+        self._thumbnailer.exported.connect(self._on_exported)
         self._model = PageListModel(self)
         self._undo_stack = QUndoStack(self)
         self._view = PageView(self._model, self._thumbnailer, self._undo_stack, self)
@@ -74,7 +90,7 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self.close_preview)
 
         self.setCentralWidget(self._splitter)
-        self.setWindowTitle(APP_NAME)
+        self.setWindowTitle(APP_TITLE)
         self.resize(1100, 800)
         self.setAcceptDrops(True)
 
@@ -90,6 +106,11 @@ class MainWindow(QMainWindow):
             file_menu, "저장(&S)", QKeySequence.StandardKey.Save, self._save)
         self._save_as_action = self._add_action(
             file_menu, "다른 이름으로 저장(&A)…", "Ctrl+Shift+S", self._save_as)
+        self._save_copy_action = self._add_action(
+            file_menu, "사본으로 저장(&C)…", "Ctrl+Alt+S", self._save_copy)
+        file_menu.addSeparator()
+        self._export_action = self._add_action(
+            file_menu, "선택한 페이지를 JPG로 저장(&J)…", "Ctrl+J", self._choose_jpg_target)
         file_menu.addSeparator()
         self._add_action(file_menu, "끝내기(&X)", "Ctrl+Q", self.close)
 
@@ -120,6 +141,9 @@ class MainWindow(QMainWindow):
         self._add_action(edit_menu, "모두 선택(&A)", QKeySequence.StandardKey.SelectAll, view.selectAll)
         view.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         view.addActions(edit_menu.actions())
+        separator = QAction(self)
+        separator.setSeparator(True)
+        view.addActions([separator, self._export_action])
 
         help_menu = self.menuBar().addMenu("도움말(&H)")
         self._add_action(help_menu, "도움말(&H)", "F1", self.show_help)
@@ -156,7 +180,8 @@ class MainWindow(QMainWindow):
         self._update_state()
 
     def _busy(self) -> bool:
-        return self._save_job is not None or self._loading is not None
+        return (self._save_job is not None or self._loading is not None
+                or self._exporting is not None)
 
     def _update_state(self, *_) -> None:
         selected = len(self._view.selected_rows())
@@ -167,8 +192,10 @@ class MainWindow(QMainWindow):
         can_save = self._model.rowCount() > 0 and not self._busy()
         self._save_action.setEnabled(can_save and self.isWindowModified())
         self._save_as_action.setEnabled(can_save)
-        if self._loading is not None:
-            return  # keep the "opening" message
+        self._save_copy_action.setEnabled(can_save)
+        self._export_action.setEnabled(selected > 0 and not self._busy())
+        if self._loading is not None or self._exporting is not None:
+            return  # keep the "opening" or "saving images" message
         if self._name is None:
             self.statusBar().showMessage("PDF 파일을 열거나 창에 끌어다 놓으세요.")
             return
@@ -290,7 +317,7 @@ class MainWindow(QMainWindow):
             self._name = MERGED_NAME
             self._merge_folder = load.paths[0].parent
             self._undo_stack.resetClean()
-        self.setWindowTitle(f"{self._name}[*] - {APP_NAME}")
+        self.setWindowTitle(f"{self._name}[*] - {APP_TITLE}")
 
     def _choose_files(self, title: str) -> None:
         names, _ = QFileDialog.getOpenFileNames(self, title, "", _PDF_FILTER)
@@ -318,27 +345,63 @@ class MainWindow(QMainWindow):
         if self._document is None:
             self._save_as()
             return
-        answer = QMessageBox.question(
-            self, APP_NAME, f"원본 파일을 덮어씁니다. 계속할까요?\n{self._document}",
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel)
-        if answer == QMessageBox.StandardButton.Save:
+        choice = self._ask_overwrite_or_copy()
+        if choice == "overwrite":
             self.save_to(self._document)
+        elif choice == "copy":
+            self._save_copy()
+
+    def _ask_overwrite_or_copy(self) -> str | None:
+        """Ask how to save an opened file: "overwrite", "copy", or None to cancel."""
+        box = QMessageBox(QMessageBox.Icon.Question, APP_NAME,
+                          f"원본 파일을 덮어쓸까요, 사본으로 저장할까요?\n{self._document}",
+                          parent=self)
+        overwrite = box.addButton("덮어쓰기(&O)", QMessageBox.ButtonRole.DestructiveRole)
+        copy = box.addButton("사본으로 저장(&C)…", QMessageBox.ButtonRole.AcceptRole)
+        cancel = box.addButton("취소", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(copy)  # Enter never overwrites the original
+        box.setEscapeButton(cancel)
+        box.exec()
+        clicked = box.clickedButton()
+        return "overwrite" if clicked is overwrite else "copy" if clicked is copy else None
+
+    def _suggested_pdf(self, suffix: str) -> Path:
+        if self._document is None:
+            return self._merge_folder / f"병합{suffix}.pdf"
+        return self._document.with_name(f"{self._document.stem}{suffix}.pdf")
+
+    def _choose_pdf_target(self, title: str, suggested: Path) -> Path | None:
+        name, _ = QFileDialog.getSaveFileName(self, title, str(suggested), _PDF_FILTER)
+        if not name:
+            return None
+        path = Path(name)
+        return path if path.suffix else path.with_suffix(".pdf")
 
     def _save_as(self) -> None:
-        if self._document is None:
-            suggested = self._merge_folder / "병합.pdf"
-        else:
-            suggested = self._document.with_name(f"{self._document.stem}_편집.pdf")
-        name, _ = QFileDialog.getSaveFileName(self, "다른 이름으로 저장", str(suggested), _PDF_FILTER)
-        if name:
-            path = Path(name)
-            self.save_to(path if path.suffix else path.with_suffix(".pdf"))
+        suggested = self._suggested_pdf("" if self._document is None else "_편집")
+        path = self._choose_pdf_target("다른 이름으로 저장", suggested)
+        if path:
+            self.save_to(path)
 
-    def save_to(self, dest: Path) -> None:
-        """Write the edited document to `dest` in the background, then switch to it."""
+    def _save_copy(self) -> None:
+        path = self._choose_pdf_target("사본으로 저장", self._suggested_pdf("_사본"))
+        if path:
+            self.save_to(path, copy=True)
+
+    def save_to(self, dest: Path, copy: bool = False) -> None:
+        """Write the edited document to `dest` in the background, then switch to it.
+
+        With `copy`, the open document stays as it is, unsaved changes included.
+        """
         if self._busy():
             return
+        if copy and dest.resolve() in self._sources:
+            # The pages on screen are read from that file; replacing it would scramble them.
+            QMessageBox.warning(
+                self, APP_NAME,
+                f"열려 있는 파일에는 사본을 저장할 수 없습니다. 다른 이름을 선택하세요.\n{dest}")
+            return
+        self._save_is_copy = copy
         self._save_dest = dest.resolve()
         # Written next to the target and swapped in at the end, so a failed
         # or cancelled save never damages an existing file.
@@ -373,13 +436,17 @@ class MainWindow(QMainWindow):
             return
         dest = self._end_save()
         temp = dest.with_name(dest.name + ".tmp")
-        # Windows cannot replace a file that is open, and the target may be one we are showing.
-        self._thumbnailer.close(dest, wait=True)
+        if not self._save_is_copy:
+            # Windows cannot replace a file that is open, and the target may be one we are showing.
+            self._thumbnailer.close(dest, wait=True)
         try:
             os.replace(temp, dest)
         except OSError as e:
             temp.unlink(missing_ok=True)
             self._show_save_error(str(e))
+            return
+        if self._save_is_copy:
+            self.statusBar().showMessage(f"사본을 저장했습니다: {dest}", 5000)
             return
         # Continue from the saved file: its pages are now in the edited order.
         self._scroll_after_open = self._view.top_row()
@@ -399,6 +466,71 @@ class MainWindow(QMainWindow):
 
     def _show_save_error(self, message: str) -> None:
         QMessageBox.warning(self, APP_NAME, f"저장하지 못했습니다.\n{self._save_dest}\n\n{message}")
+
+    # --- pages as images -------------------------------------------------
+
+    def _choose_jpg_target(self) -> None:
+        rows = self._view.selected_rows()
+        if not rows or self._busy():
+            return
+        folder = self._merge_folder if self._document is None else self._document.parent
+        stem = "병합" if self._document is None else self._document.stem
+        digits = len(str(self._model.rowCount()))
+        names = {row: f"{stem}_{row + 1:0{digits}}.jpg" for row in rows}
+        if len(rows) == 1:
+            name, _ = QFileDialog.getSaveFileName(
+                self, "JPG로 저장", str(folder / names[rows[0]]), _JPG_FILTER)
+            if not name:
+                return
+            path = Path(name)
+            targets = {rows[0]: path if path.suffix else path.with_suffix(".jpg")}
+        else:
+            name = QFileDialog.getExistingDirectory(
+                self, f"JPG {len(rows)}개를 저장할 폴더 선택", str(folder))
+            if not name:
+                return
+            targets = {row: Path(name) / names[row] for row in rows}
+            existing = [path.name for path in targets.values() if path.exists()]
+            if existing:
+                listed = "\n".join(existing[:10]) + ("\n…" if len(existing) > 10 else "")
+                answer = QMessageBox.question(
+                    self, APP_NAME,
+                    f"이미 있는 파일 {len(existing)}개를 덮어씁니다. 계속할까요?\n{listed}",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel)
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+        self.export_jpg(targets)
+
+    def export_jpg(self, targets: dict[int, Path]) -> None:
+        """Save each page (by row) to its image file as it is shown, rotation included."""
+        if not targets or self._busy():
+            return
+        paths = list(targets.values())
+        self._exporting = _Export(len(paths), paths[0].parent, remaining=len(paths))
+        self._update_state()
+        self.statusBar().showMessage(f"JPG 저장 중… {len(paths)}쪽")
+        for row, path in targets.items():
+            page = self._model.page(row)
+            self._thumbnailer.export_jpg(page.source, page.index, page.rotation, path)
+
+    def _on_exported(self, path: Path, ok: bool) -> None:
+        export = self._exporting
+        if export is None:
+            return
+        if not ok:
+            export.failures.append(path)
+        export.remaining -= 1
+        if export.remaining:
+            return
+        self._exporting = None
+        self._update_state()
+        saved = export.total - len(export.failures)
+        if saved:
+            self.statusBar().showMessage(f"JPG {saved}개를 저장했습니다: {export.folder}", 5000)
+        if export.failures:
+            details = "\n".join(str(path) for path in export.failures)
+            QMessageBox.warning(self, APP_NAME, f"JPG로 저장하지 못했습니다.\n\n{details}")
 
     # --- files dropped outside the page grid, or before anything is open ---
 

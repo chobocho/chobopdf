@@ -108,3 +108,49 @@ def test_save_overwrites_the_open_source(window, source):
         wait_for(window._thumbnailer.thumbnailReady)
     image = window._thumbnailer.get((source, 0))
     assert image.width() > image.height()  # 110x200 page rotated by 90
+
+
+def test_save_as_copy_keeps_the_open_document(window, source, tmp_path):
+    expected = edit(window)
+    dest = tmp_path / "source_사본.pdf"
+    window.save_to(dest, copy=True)
+    wait_for(window._save_job.finished)
+
+    assert read_pages(dest) == expected
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]  # original untouched
+    assert not dest.with_name(dest.name + ".tmp").exists()
+    assert window._document == source                              # still editing the original
+    assert window.isWindowModified()
+    assert window._undo_stack.canUndo()
+    assert {page.source for page in window._model.pages()} == {source}
+
+
+def test_copy_cannot_replace_a_file_that_is_open(window, source, monkeypatch):
+    warnings = []
+    monkeypatch.setattr("chobopdf.ui.main_window.QMessageBox.warning",
+                        lambda *args: warnings.append(args[2]))
+    edit(window)
+    window.save_to(source, copy=True)
+    assert window._save_job is None
+    assert len(warnings) == 1
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]
+
+
+@pytest.mark.parametrize("choice, saved_to", [("overwrite", "source.pdf"),
+                                              ("copy", "chosen.pdf"),
+                                              (None, None)])
+def test_save_asks_whether_to_overwrite_or_save_a_copy(window, source, tmp_path, monkeypatch,
+                                                       choice, saved_to):
+    calls = []
+    monkeypatch.setattr(window, "_ask_overwrite_or_copy", lambda: choice)
+    monkeypatch.setattr(window, "_choose_pdf_target",
+                        lambda title, suggested: (calls.append(suggested), tmp_path / "chosen.pdf")[1])
+    monkeypatch.setattr(window, "save_to", lambda dest, copy=False: calls.append((dest.name, copy)))
+    edit(window)
+    window._save()
+    if choice == "copy":
+        assert calls == [source.with_name("source_사본.pdf"), (saved_to, True)]
+    elif choice == "overwrite":
+        assert calls == [(saved_to, False)]
+    else:
+        assert calls == []
