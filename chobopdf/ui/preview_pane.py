@@ -15,7 +15,7 @@ _EPSILON = 1e-6
 class PreviewPane(QWidget):
     """Shows one page large, fitted to the pane's width, for checking its content.
 
-    The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0.
+    The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0 9.
     While the pane has the focus, Page Up / Page Down step through the document.
     The cached thumbnail is shown stretched at once and replaced when the
     sharp render arrives.
@@ -45,7 +45,7 @@ class PreviewPane(QWidget):
         self._zoom_in_button = self._add_button(header, "＋", "확대 (Ctrl++)", lambda: self._zoom(1))
         self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", lambda: self._set_scale(1.0))
         self._fit_page_button = self._add_button(
-            header, "쪽 맞춤", "페이지 전체가 보이도록 세로 길이에 맞춤",
+            header, "쪽 맞춤", "페이지 전체가 보이도록 세로 길이에 맞춤 (Ctrl+9)",
             lambda: self._set_scale(1.0, fit_page=True))
         header.addSpacing(8)
         self._add_button(header, "✕", "미리보기 닫기 (Esc)", self.closeRequested.emit)
@@ -200,6 +200,8 @@ class PreviewPane(QWidget):
             self._zoom(-1)
         elif key == Qt.Key.Key_0:
             self._set_scale(1.0)
+        elif key == Qt.Key.Key_9:
+            self._set_scale(1.0, fit_page=True)
         else:
             return False
         return True

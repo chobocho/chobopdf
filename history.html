@@ -133,5 +133,14 @@
 <ul>
   <li>사용자 요청에 따라 README.md(영어), README.ko.md(한국어), docs/architecture.svg, history.html을 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>는 포함하지 않음.</li>
 </ul>
+<h2>2026-10-10 버전 0.1.0, F1 도움말, 쪽 맞춤 단축키</h2>
+<ul>
+  <li>버전: <code>chobopdf/__init__.py</code>에 <code>__version__ = "0.1.0"</code>을 두고 <code>pyproject.toml</code>이 이 값을 읽도록 변경(버전을 한 곳에서만 관리). 값 자체는 기존과 같은 0.1.0.</li>
+  <li>도움말: F1 또는 도움말 메뉴로 열림. 버전과 파일·편집·미리보기 단축키 표, 참고 사항 표시. 창을 막지 않는 대화상자이며 F1을 다시 누르거나 닫기 버튼으로 닫음. 추가: <code>chobopdf/ui/help_dialog.py</code>.</li>
+  <li>쪽 맞춤 단축키: 미리보기에서 Ctrl+9 (폭 맞춤 Ctrl+0 옆 키). 버튼 툴팁에도 표시.</li>
+  <li>README.md, README.ko.md에 F1과 Ctrl+9 반영.</li>
+  <li>검증: <code>.venv</code>를 새로 만들어 의존성 설치, 단위 테스트 40개 통과(F1 열기/닫기, 버전, Ctrl+9 추가). 도움말 창 화면 캡처 확인. 실제 키보드 조작과 exe 재빌드는 하지 않음.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
+</ul>
 </body>
 </html>

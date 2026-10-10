@@ -12,6 +12,7 @@ from chobopdf.model.commands import InsertPages
 from chobopdf.model.document import PageListModel, PageRef
 from chobopdf.pdfio.saver import SaveJob
 from chobopdf.render.thumbnailer import Thumbnailer
+from chobopdf.ui.help_dialog import HelpDialog
 from chobopdf.ui.page_delegate import THUMB_SIZE
 from chobopdf.ui.page_view import MAX_ZOOM, MIN_ZOOM, PageView, pdf_paths
 from chobopdf.ui.preview_pane import PreviewPane
@@ -51,6 +52,7 @@ class MainWindow(QMainWindow):
         self._save_job: SaveJob | None = None
         self._save_dest: Path | None = None
         self._scroll_after_open: int | None = None
+        self._help: HelpDialog | None = None
         self._thumbnailer = Thumbnailer(round(THUMB_SIZE * self.devicePixelRatioF()), parent=self)
         self._thumbnailer.opened.connect(self._on_opened)
         self._thumbnailer.openFailed.connect(self._on_open_failed)
@@ -119,6 +121,9 @@ class MainWindow(QMainWindow):
         view.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         view.addActions(edit_menu.actions())
 
+        help_menu = self.menuBar().addMenu("도움말(&H)")
+        self._add_action(help_menu, "도움말(&H)", "F1", self.show_help)
+
         # Thumbnail zoom: slider in the status bar, or Ctrl+wheel over the pages.
         zoom_slider = QSlider(Qt.Orientation.Horizontal, minimum=MIN_ZOOM, maximum=MAX_ZOOM,
                               singleStep=10, pageStep=25, fixedWidth=140, toolTip="썸네일 크기")
@@ -171,6 +176,13 @@ class MainWindow(QMainWindow):
         if selected:
             message += f" · {selected}쪽 선택"
         self.statusBar().showMessage(message)
+
+    def show_help(self) -> None:
+        if self._help is None:
+            self._help = HelpDialog(self)
+        self._help.show()
+        self._help.raise_()
+        self._help.activateWindow()
 
     # --- preview ---------------------------------------------------------
 

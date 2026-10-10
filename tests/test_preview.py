@@ -133,6 +133,11 @@ def test_fit_page_shows_the_whole_page(window, app):
     preview._fit_page_button.click()
     width, height = shown(window)
     assert height == pytest.approx(viewport.height() - 16, abs=3)   # as tall as the pane
+    QTest.keyClick(preview._scroll, Qt.Key.Key_0, Qt.KeyboardModifier.ControlModifier)
+    assert shown(window)[1] > viewport.height()                # fit width: taller than the pane
+    QTest.keyClick(preview._scroll, Qt.Key.Key_9, Qt.KeyboardModifier.ControlModifier)
+    width, height = shown(window)
+    assert height == pytest.approx(viewport.height() - 16, abs=3)   # Ctrl+9 fits the page again
     assert width < viewport.width()
     fitted_percent = preview._zoom_label.text()
 

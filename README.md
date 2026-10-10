@@ -75,10 +75,12 @@ The same commands are in the Edit menu and in the thumbnail context menu.
 | Close | `Esc`, or the ✕ button |
 | Zoom in / out | `Ctrl++` / `Ctrl+-`, `Ctrl+wheel`, or the ＋ / － buttons |
 | Fit width | `Ctrl+0`, or the "폭 맞춤" button |
-| Fit page (the whole page on screen) | The "쪽 맞춤" button |
+| Fit page (the whole page on screen) | `Ctrl+9`, or the "쪽 맞춤" button |
 | Next / previous page | `Page Down` / `Page Up` |
 
-The zoom and page keys work once the preview has the focus, so click it first. While it is open, the preview follows the page selected on the left, and the divider can be dragged to change the split.
+`F1` opens the in-app help with this shortcut list and the version; pressing `F1` again closes it.
+
+The zoom, fit and page keys work once the preview has the focus, so click it first. While it is open, the preview follows the page selected on the left, and the divider can be dragged to change the split.
 
 ## Limitations
 
