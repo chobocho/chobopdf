@@ -169,6 +169,10 @@ class PageView(QListView):
         if not command.is_noop():
             self._undo_stack.push(command)
 
+    def select_page(self, row: int) -> None:
+        """Make `row` the only selected, current and visible page."""
+        self._select_rows([row])
+
     def _select_rows(self, rows: list[int]) -> None:
         model = self.model()
         selection = QItemSelection()

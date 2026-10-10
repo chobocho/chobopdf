@@ -1,4 +1,6 @@
 import pytest
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 
 from chobopdf.ui.main_window import MainWindow
 from conftest import make_pdf, wait_for
@@ -69,7 +71,8 @@ def test_preview_follows_the_current_page_and_its_rotation(window, app):
 def test_zoom_enlarges_and_close_restores_the_grid(window, app):
     double_click(window, 0)
     fit_width, _ = shown(window)
-    window._preview._zoom(3)                                   # 100% -> 200%
+    for _ in range(3):                                         # 100% -> 125% -> 150% -> 200%
+        window._preview._zoom_in_button.click()
     assert window._preview._zoom_label.text() == "200%"
     width, _ = shown(window)
     assert width == pytest.approx(fit_width * 2, abs=8)
@@ -78,3 +81,44 @@ def test_zoom_enlarges_and_close_restores_the_grid(window, app):
     app.processEvents()
     assert window._preview.isHidden()
     assert window._view.width() > 900
+
+
+def test_page_keys_step_through_pages_while_the_preview_has_focus(window, app):
+    double_click(window, 0)
+    shown(window)
+    pane = window._preview._scroll
+    pane.setFocus()
+
+    QTest.keyClick(pane, Qt.Key.Key_PageDown)
+    assert window._preview._title.text() == "2쪽"
+    assert window._view.selected_rows() == [1]
+    width, height = shown(window)
+    assert width == pytest.approx(height * 2, abs=2)           # the landscape page
+    assert pane.hasFocus()                                     # keeps the keyboard
+
+    QTest.keyClick(pane, Qt.Key.Key_PageDown)
+    QTest.keyClick(pane, Qt.Key.Key_PageDown)                  # already on the last page
+    assert window._preview._title.text() == "3쪽"
+    QTest.keyClick(pane, Qt.Key.Key_PageUp)
+    assert window._preview._title.text() == "2쪽"
+
+
+def test_preview_size_controls(window, app):
+    double_click(window, 0)
+    fit_width, _ = shown(window)
+    preview = window._preview
+
+    preview._zoom_out_button.click()
+    assert preview._zoom_label.text() == "75%"
+    width, _ = shown(window)
+    assert width == pytest.approx(fit_width * 0.75, abs=6)
+
+    QTest.keyClick(preview._scroll, Qt.Key.Key_Minus, Qt.KeyboardModifier.ControlModifier)
+    QTest.keyClick(preview._scroll, Qt.Key.Key_Minus, Qt.KeyboardModifier.ControlModifier)
+    assert preview._zoom_label.text() == "25%"
+    assert not preview._zoom_out_button.isEnabled()            # smallest size
+
+    QTest.keyClick(preview._scroll, Qt.Key.Key_0, Qt.KeyboardModifier.ControlModifier)
+    assert preview._zoom_label.text() == "100%"
+    width, _ = shown(window)
+    assert width == pytest.approx(fit_width, abs=6)

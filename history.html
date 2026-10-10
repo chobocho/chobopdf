@@ -98,5 +98,14 @@
   <li>검증: 단위 테스트 35개 통과. 468MB 파일에서 미리보기 렌더링 약 40ms, 분할 화면 캡처 확인. exe 재빌드. 실제 마우스 더블 클릭은 미확인(신호를 직접 발생시켜 확인).</li>
   <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
 </ul>
+
+<h2>2026-10-10 미리보기 크기 조절과 Page Up/Down 이동</h2>
+<ul>
+  <li>미리보기 상단에 크기 조절 버튼 추가: －, ＋, 폭 맞춤. 범위를 25~400%(창 폭 기준, 9단계)로 넓혀 축소도 가능. 단축키 Ctrl+-, Ctrl++, Ctrl+0과 기존 Ctrl+휠도 사용 가능.</li>
+  <li>미리보기를 클릭해 포커스를 준 상태에서 Page Down/Page Up을 누르면 다음/이전 페이지로 이동. 왼쪽 썸네일의 선택도 함께 이동하며 포커스는 미리보기에 유지.</li>
+  <li>변경: preview_pane.py(버튼, 키 처리, pageStepRequested), page_view.py(select_page), main_window.py(_step_preview).</li>
+  <li>검증: 단위 테스트 37개 통과, 화면 캡처 확인, exe 재빌드. 실제 키보드·마우스 조작은 미확인.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
+</ul>
 </body>
 </html>

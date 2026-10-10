@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         self._preview = PreviewPane(self._thumbnailer, self)
         self._preview.hide()
         self._preview.closeRequested.connect(self.close_preview)
+        self._preview.pageStepRequested.connect(self._step_preview)
         self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self._splitter.addWidget(self._view)
         self._splitter.addWidget(self._preview)
@@ -183,6 +184,12 @@ class MainWindow(QMainWindow):
     def close_preview(self) -> None:
         self._preview.hide()
         self._preview.show_page(None, 0)
+
+    def _step_preview(self, step: int) -> None:
+        current = self._view.currentIndex()
+        row = current.row() + step if current.isValid() else 0
+        if 0 <= row < self._model.rowCount():
+            self._view.select_page(row)  # the preview follows the current page
 
     def _update_preview(self, *_) -> None:
         """Keep the preview on the current page while it is open."""

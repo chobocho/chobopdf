@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QScrollArea, QToolButton, QV
 from chobopdf.model.document import PageRef
 from chobopdf.render.thumbnailer import Thumbnailer
 
-_ZOOM_STEPS = [1.0, 1.25, 1.5, 2.0, 3.0, 4.0]  # multiples of "fit to width"
+_ZOOM_STEPS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0]  # multiples of "fit to width"
+_FIT_STEP = _ZOOM_STEPS.index(1.0)
 _MAX_RENDER_PX = 3500  # widest image asked of the renderer; beyond it the image is stretched
 _MARGIN = 8
 
@@ -14,30 +15,36 @@ _MARGIN = 8
 class PreviewPane(QWidget):
     """Shows one page large, fitted to the pane's width, for checking its content.
 
-    Ctrl+wheel zooms in. The cached thumbnail is shown stretched at once and
-    replaced when the sharp render arrives.
+    The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0.
+    While the pane has the focus, Page Up / Page Down step through the document.
+    The cached thumbnail is shown stretched at once and replaced when the
+    sharp render arrives.
     """
 
     closeRequested = Signal()
+    pageStepRequested = Signal(int)  # -1: previous page, +1: next page
 
     def __init__(self, thumbnailer: Thumbnailer, parent=None):
         super().__init__(parent)
         self._thumbnailer = thumbnailer
         self._page: PageRef | None = None
         self._aspect = 1.414  # height / width of the shown page
-        self._zoom_step = 0
+        self._zoom_step = _FIT_STEP
         self._token = 0
         self._requested: tuple[PageRef, int] | None = None
 
         self._title = QLabel()
-        self._zoom_label = QLabel()
-        close_button = QToolButton(text="✕", autoRaise=True, toolTip="미리보기 닫기 (Esc)")
-        close_button.clicked.connect(self.closeRequested)
+        self._zoom_label = QLabel(alignment=Qt.AlignmentFlag.AlignCenter, minimumWidth=44)
         header = QHBoxLayout()
         header.setContentsMargins(8, 2, 2, 2)
+        header.setSpacing(2)
         header.addWidget(self._title, 1)
+        self._zoom_out_button = self._add_button(header, "－", "축소 (Ctrl+-)", lambda: self._zoom(-1))
         header.addWidget(self._zoom_label)
-        header.addWidget(close_button)
+        self._zoom_in_button = self._add_button(header, "＋", "확대 (Ctrl++)", lambda: self._zoom(1))
+        self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", self._zoom_to_fit)
+        header.addSpacing(8)
+        self._add_button(header, "✕", "미리보기 닫기 (Esc)", self.closeRequested.emit)
 
         self._image = QLabel()
         self._image.setScaledContents(True)
@@ -48,6 +55,7 @@ class PreviewPane(QWidget):
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._scroll.setWidget(self._image)
         self._scroll.viewport().installEventFilter(self)
+        self._scroll.installEventFilter(self)  # keys, once a click has given it the focus
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -62,6 +70,14 @@ class PreviewPane(QWidget):
         thumbnailer.previewReady.connect(self._on_ready)
         self.show_page(None, 0)
 
+    def _add_button(self, layout, text: str, tooltip: str, slot) -> QToolButton:
+        # No focus of their own: the keyboard stays with the page after a click.
+        button = QToolButton(text=text, autoRaise=True, toolTip=tooltip,
+                             focusPolicy=Qt.FocusPolicy.NoFocus)
+        button.clicked.connect(slot)
+        layout.addWidget(button)
+        return button
+
     def show_page(self, page: PageRef | None, number: int) -> None:
         """Show `page`, the `number`-th of the document; None empties the pane."""
         self._title.setText(f"{number}쪽" if page else "페이지를 선택하세요")
@@ -75,6 +91,8 @@ class PreviewPane(QWidget):
             self._image.clear()
             self._image.resize(0, 0)
             self._zoom_label.clear()
+            self._zoom_out_button.setEnabled(False)
+            self._zoom_in_button.setEnabled(False)
             return
         if not same_sheet:
             self._scroll.verticalScrollBar().setValue(0)
@@ -98,6 +116,8 @@ class PreviewPane(QWidget):
         width = self._target_width()
         self._image.resize(width, round(width * self._aspect))
         self._zoom_label.setText(f"{round(_ZOOM_STEPS[self._zoom_step] * 100)}%")
+        self._zoom_out_button.setEnabled(self._zoom_step > 0)
+        self._zoom_in_button.setEnabled(self._zoom_step < len(_ZOOM_STEPS) - 1)
 
     def _request(self) -> None:
         if self._page is None:
@@ -119,6 +139,9 @@ class PreviewPane(QWidget):
         self._set_image(image)
         self._fit()
 
+    def _zoom_to_fit(self) -> None:
+        self._zoom(_FIT_STEP - self._zoom_step)
+
     def _zoom(self, steps: int) -> None:
         step = max(0, min(len(_ZOOM_STEPS) - 1, self._zoom_step + steps))
         if step != self._zoom_step and self._page is not None:
@@ -127,7 +150,12 @@ class PreviewPane(QWidget):
             self._render_timer.start()
 
     def eventFilter(self, watched, event) -> bool:
-        if event.type() == QEvent.Type.Resize:
+        if event.type() == QEvent.Type.KeyPress:
+            if self._on_key(event):
+                return True
+        elif watched is not self._scroll.viewport():
+            pass
+        elif event.type() == QEvent.Type.Resize:
             if self._page is not None:
                 self._fit()
                 self._render_timer.start()
@@ -136,3 +164,21 @@ class PreviewPane(QWidget):
             self._zoom(1 if event.angleDelta().y() > 0 else -1)
             return True
         return super().eventFilter(watched, event)
+
+    def _on_key(self, event) -> bool:
+        key = event.key()
+        if key == Qt.Key.Key_PageDown:
+            self.pageStepRequested.emit(1)
+        elif key == Qt.Key.Key_PageUp:
+            self.pageStepRequested.emit(-1)
+        elif not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            return False
+        elif key in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
+            self._zoom(1)
+        elif key == Qt.Key.Key_Minus:
+            self._zoom(-1)
+        elif key == Qt.Key.Key_0:
+            self._zoom_to_fit()
+        else:
+            return False
+        return True
