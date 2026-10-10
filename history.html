@@ -76,6 +76,16 @@
 <h2>2026-10-10 커밋</h2>
 <ul>
   <li>기본 브랜치(main)에 직접 커밋하지 않고 <code>feature/pdf-organizer</code> 브랜치를 만들어 1~4단계 전체를 한 커밋으로 기록. <code>.idea/</code>는 포함하지 않음. 푸시는 하지 않음.</li>
+  <li>이후 <code>main</code>에 fast-forward 병합(커밋 09b2263). 푸시는 하지 않음.</li>
+</ul>
+
+<h2>2026-10-10 앱 아이콘 추가</h2>
+<ul>
+  <li><code>tools/make_icon.py</code>: 아이콘을 코드로 그려 <code>chobopdf/resources/icon.png</code>(256px)와 <code>icon.ico</code>(16~256px 7종)를 생성. 붉은 그라데이션 둥근 사각형 위에 겹친 문서 두 장과 PDF 라벨. 48px 미만에서는 글자와 줄을 생략.</li>
+  <li><code>chobopdf/main.py</code>: 창 아이콘 설정, Windows 작업 표시줄에 Python 아이콘 대신 앱 아이콘이 나오도록 AppUserModelID 지정.</li>
+  <li><code>build_exe.bat</code>: exe 아이콘(--icon)과 리소스 포함(--add-data) 추가. <code>pyproject.toml</code>: 리소스를 패키지 데이터로 포함.</li>
+  <li>검증: 크기별 미리보기 확인, exe 재빌드 후 아이콘 적용 로그와 리소스 포함 확인, 단위 테스트 32개 통과. 실제 작업 표시줄·탐색기에서의 표시는 미확인.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 직접 커밋하고 <code>origin</code>에 푸시.</li>
 </ul>
 </body>
 </html>

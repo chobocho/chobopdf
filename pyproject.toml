@@ -22,5 +22,8 @@ chobopdf = "chobopdf.main:main"
 [tool.setuptools.packages.find]
 include = ["chobopdf*"]
 
+[tool.setuptools.package-data]
+chobopdf = ["resources/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
