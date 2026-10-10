@@ -7,9 +7,9 @@ from chobopdf.model.document import PageRef
 from chobopdf.render.thumbnailer import Thumbnailer
 
 _ZOOM_STEPS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0]  # multiples of "fit to width"
-_FIT_STEP = _ZOOM_STEPS.index(1.0)
 _MAX_RENDER_PX = 3500  # widest image asked of the renderer; beyond it the image is stretched
 _MARGIN = 8
+_EPSILON = 1e-6
 
 
 class PreviewPane(QWidget):
@@ -29,7 +29,8 @@ class PreviewPane(QWidget):
         self._thumbnailer = thumbnailer
         self._page: PageRef | None = None
         self._aspect = 1.414  # height / width of the shown page
-        self._zoom_step = _FIT_STEP
+        self._scale = 1.0  # multiple of the width that fits the pane
+        self._fit_page = False  # instead of _scale, size the page so all of it is visible
         self._token = 0
         self._requested: tuple[PageRef, int] | None = None
 
@@ -42,7 +43,10 @@ class PreviewPane(QWidget):
         self._zoom_out_button = self._add_button(header, "－", "축소 (Ctrl+-)", lambda: self._zoom(-1))
         header.addWidget(self._zoom_label)
         self._zoom_in_button = self._add_button(header, "＋", "확대 (Ctrl++)", lambda: self._zoom(1))
-        self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", self._zoom_to_fit)
+        self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", lambda: self._set_scale(1.0))
+        self._fit_page_button = self._add_button(
+            header, "쪽 맞춤", "페이지 전체가 보이도록 세로 길이에 맞춤",
+            lambda: self._set_scale(1.0, fit_page=True))
         header.addSpacing(8)
         self._add_button(header, "✕", "미리보기 닫기 (Esc)", self.closeRequested.emit)
 
@@ -50,7 +54,7 @@ class PreviewPane(QWidget):
         self._image.setScaledContents(True)
         self._scroll = QScrollArea()
         self._scroll.setBackgroundRole(QPalette.ColorRole.Dark)
-        self._scroll.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self._scroll.setAlignment(Qt.AlignmentFlag.AlignCenter)
         # Always shown, so fitting to the width does not flip the scroll bar on and off.
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._scroll.setWidget(self._image)
@@ -104,9 +108,18 @@ class PreviewPane(QWidget):
         self._fit()
         self._request()
 
+    def _fit_width(self) -> int:
+        return max(50, self._scroll.viewport().width() - 2 * _MARGIN)
+
+    def _current_scale(self) -> float:
+        if not self._fit_page:
+            return self._scale
+        # Width at which the page is exactly as tall as the pane; a wide page stops at the pane's width.
+        width = max(50, (self._scroll.viewport().height() - 2 * _MARGIN) / self._aspect)
+        return min(1.0, width / self._fit_width())
+
     def _target_width(self) -> int:
-        fit = max(50, self._scroll.viewport().width() - 2 * _MARGIN)
-        return round(fit * _ZOOM_STEPS[self._zoom_step])
+        return round(self._fit_width() * self._current_scale())
 
     def _set_image(self, image: QImage) -> None:
         self._aspect = image.height() / image.width()
@@ -115,9 +128,10 @@ class PreviewPane(QWidget):
     def _fit(self) -> None:
         width = self._target_width()
         self._image.resize(width, round(width * self._aspect))
-        self._zoom_label.setText(f"{round(_ZOOM_STEPS[self._zoom_step] * 100)}%")
-        self._zoom_out_button.setEnabled(self._zoom_step > 0)
-        self._zoom_in_button.setEnabled(self._zoom_step < len(_ZOOM_STEPS) - 1)
+        scale = self._current_scale()
+        self._zoom_label.setText(f"{round(scale * 100)}%")
+        self._zoom_out_button.setEnabled(scale > _ZOOM_STEPS[0] + _EPSILON)
+        self._zoom_in_button.setEnabled(scale < _ZOOM_STEPS[-1] - _EPSILON)
 
     def _request(self) -> None:
         if self._page is None:
@@ -139,15 +153,22 @@ class PreviewPane(QWidget):
         self._set_image(image)
         self._fit()
 
-    def _zoom_to_fit(self) -> None:
-        self._zoom(_FIT_STEP - self._zoom_step)
-
-    def _zoom(self, steps: int) -> None:
-        step = max(0, min(len(_ZOOM_STEPS) - 1, self._zoom_step + steps))
-        if step != self._zoom_step and self._page is not None:
-            self._zoom_step = step
+    def _set_scale(self, scale: float, fit_page: bool = False) -> None:
+        if self._page is not None:
+            self._scale = scale
+            self._fit_page = fit_page
             self._fit()
             self._render_timer.start()
+
+    def _zoom(self, direction: int) -> None:
+        """Step to the next larger (+1) or smaller (-1) size from wherever the page is now."""
+        scale = self._current_scale()
+        if direction > 0:
+            steps = [step for step in _ZOOM_STEPS if step > scale + _EPSILON]
+        else:
+            steps = [step for step in reversed(_ZOOM_STEPS) if step < scale - _EPSILON]
+        if steps:
+            self._set_scale(steps[0])
 
     def eventFilter(self, watched, event) -> bool:
         if event.type() == QEvent.Type.KeyPress:
@@ -178,7 +199,7 @@ class PreviewPane(QWidget):
         elif key == Qt.Key.Key_Minus:
             self._zoom(-1)
         elif key == Qt.Key.Key_0:
-            self._zoom_to_fit()
+            self._set_scale(1.0)
         else:
             return False
         return True

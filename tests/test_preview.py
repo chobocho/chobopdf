@@ -122,3 +122,31 @@ def test_preview_size_controls(window, app):
     assert preview._zoom_label.text() == "100%"
     width, _ = shown(window)
     assert width == pytest.approx(fit_width, abs=6)
+
+
+def test_fit_page_shows_the_whole_page(window, app):
+    double_click(window, 0)                                    # portrait 200x400 page
+    shown(window)
+    preview = window._preview
+    viewport = preview._scroll.viewport()
+
+    preview._fit_page_button.click()
+    width, height = shown(window)
+    assert height == pytest.approx(viewport.height() - 16, abs=3)   # as tall as the pane
+    assert width < viewport.width()
+    fitted_percent = preview._zoom_label.text()
+
+    window._view.select_page(1)                                # landscape: limited by the width
+    width, height = shown(window)
+    assert width == pytest.approx(viewport.width() - 16, abs=3)
+    assert height < viewport.height()
+    assert preview._zoom_label.text() == "100%"
+
+    window._view.select_page(2)                                # back to a portrait page
+    shown(window)
+    assert preview._zoom_label.text() == fitted_percent
+
+    preview._zoom_in_button.click()                            # steps on from the fitted size
+    fitted = int(fitted_percent.rstrip("%"))
+    stepped = int(preview._zoom_label.text().rstrip("%"))
+    assert stepped == min(step for step in (25, 50, 75, 100) if step > fitted)
