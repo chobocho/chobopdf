@@ -104,10 +104,10 @@ JPG 저장은 한 쪽을 선택했으면 파일 이름을, 여러 쪽이면 폴�
 
 ![ChoboPDF 아키텍처](docs/architecture.svg)
 
-- **UI** (`chobopdf/ui`): 메인 창, 썸네일 격자, 미리보기. 편집은 직접 하지 않고 실행 취소 스택에 명령을 올립니다.
-- **모델** (`chobopdf/model`): 문서는 `PageRef(원본 파일, 페이지 번호, 회전각)`의 목록입니다. 삽입·삭제·이동·회전 명령이 이 목록만 바꾸므로 편집이 즉시 끝나고, 원본 PDF는 건드리지 않습니다.
-- **Thumbnailer** (`chobopdf/render`): 전용 스레드 하나에서 [pypdfium2](https://github.com/pypdfium2-team/pypdfium2)로 PDF를 열고 렌더링합니다. 화면에 보이는 페이지와 그 주변만 렌더링해 LRU 캐시에 보관하고, 회전은 다시 렌더링하지 않고 그릴 때 적용합니다.
-- **SaveJob** (`chobopdf/pdfio`): 저장할 때 페이지 목록을 넘겨받아 별도 스레드에서 [pikepdf](https://github.com/pikepdf/pikepdf)로 새 PDF를 씁니다. 페이지 내용은 재압축 없이 그대로 복사합니다.
+- **UI** (`chobopdf/ui`): 메인 창, 썸네일 격자, 미리보기, F1 도움말 창. 편집은 직접 하지 않고 실행 취소 스택에 명령을 올립니다.
+- **모델** (`chobopdf/model`): 문서는 `PageRef(원본 파일, 페이지 번호, 회전각, 표시 여부)`의 목록입니다. 삽입·삭제·이동·회전 명령이 이 목록만 바꾸므로 편집이 즉시 끝나고, 원본 PDF는 건드리지 않습니다. 표시 여부는 페이지 표시로, 페이지를 따라다니지만 문서 내용은 아니어서 실행 취소 스택을 거치지 않고 저장되지도 않습니다.
+- **Thumbnailer** (`chobopdf/render`): PDFium이 스레드에 안전하지 않기 때문에 전용 스레드 하나에서만 [pypdfium2](https://github.com/pypdfium2-team/pypdfium2)로 PDF를 열고 렌더링합니다. 썸네일(화면에 보이는 페이지와 그 주변만 렌더링해 LRU 캐시에 보관), 큰 미리보기, 선택한 페이지의 JPG 저장 세 가지 요청을 처리합니다. 썸네일의 회전은 다시 렌더링하지 않고 그릴 때 적용합니다.
+- **SaveJob** (`chobopdf/pdfio`): 저장할 때 페이지 목록의 사본을 넘겨받아 별도 스레드에서 [pikepdf](https://github.com/pikepdf/pikepdf)로 새 PDF를 씁니다. 페이지 내용은 재압축 없이 그대로 복사합니다. `.tmp` 파일로 쓴 뒤 교체하며, 일반 저장은 저장된 파일을 다시 열고 사본 저장은 열린 문서를 그대로 둡니다.
 
 GUI는 [PySide6](https://doc.qt.io/qtforpython-6/)를 사용합니다. 그 밖에 `tests/`에 pytest 단위 테스트, `tools/make_icon.py`에 앱 아이콘 생성 스크립트가 있습니다.
 

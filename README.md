@@ -106,10 +106,10 @@ The zoom, fit and page keys work once the preview has the focus, so click it fir
 
 ![ChoboPDF architecture](docs/architecture.svg)
 
-- **UI** (`chobopdf/ui`): main window, thumbnail grid and preview. It never edits directly; it pushes commands onto the undo stack.
-- **Model** (`chobopdf/model`): the document is a list of `PageRef(source file, page index, rotation)`. The insert, delete, move and rotate commands change only this list, which is why edits are instant and the source PDFs stay untouched.
-- **Thumbnailer** (`chobopdf/render`): opens and renders PDFs with [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) on a single dedicated thread. Only the pages on or near the screen are rendered and kept in an LRU cache; rotation is applied when painting, without re-rendering.
-- **SaveJob** (`chobopdf/pdfio`): on save, takes the page list and writes a new PDF with [pikepdf](https://github.com/pikepdf/pikepdf) on its own thread. Page contents are copied as they are, without re-encoding.
+- **UI** (`chobopdf/ui`): main window, thumbnail grid, preview and the F1 help dialog. It never edits directly; it pushes commands onto the undo stack.
+- **Model** (`chobopdf/model`): the document is a list of `PageRef(source file, page index, rotation, marked)`. The insert, delete, move and rotate commands change only this list, which is why edits are instant and the source PDFs stay untouched. `marked` is the page mark: it rides along with the page but is not part of the document, so it bypasses the undo stack and is never saved.
+- **Thumbnailer** (`chobopdf/render`): opens and renders PDFs with [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) on a single dedicated thread, because PDFium is not thread-safe. It serves three kinds of request: thumbnails (only the pages on or near the screen, kept in an LRU cache), the large preview, and JPG export of the selected pages. Rotation is applied when painting a thumbnail, without re-rendering.
+- **SaveJob** (`chobopdf/pdfio`): on save, takes a snapshot of the page list and writes a new PDF with [pikepdf](https://github.com/pikepdf/pikepdf) on its own thread. Page contents are copied as they are, without re-encoding. The file is written as `.tmp` and then swapped in; after a normal save the window reopens the result, while a copy leaves the open document as it is.
 
 The GUI is built with [PySide6](https://doc.qt.io/qtforpython-6/). The repository also holds the pytest unit tests in `tests/` and the icon generator in `tools/make_icon.py`.
 
