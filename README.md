@@ -16,6 +16,9 @@ The user interface is in Korean.
 
 - **Extract pages**: save only the selected pages as a new PDF (`Ctrl+E`).
 - **Password-protected PDFs**: asks for the password when a file needs one.
+- **Save when quitting**: closing with unsaved changes offers Save and Save as, not only discarding them.
+- **Arrow keys in the preview**: `←` / `→` go to the previous / next page.
+- **Version label**: the title bar and the help show the version as `V0.1.1`.
 
 ## Features
 
@@ -32,7 +35,7 @@ The user interface is in Korean.
 
 ### View
 
-- **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page.
+- **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page. The arrow keys step through the pages.
 - **Thumbnail zoom**: 100–200%, with the status bar slider or Ctrl+wheel.
 
 ### Save and export
@@ -41,6 +44,7 @@ The user interface is in Korean.
 - **Save as a copy**: saving an opened file asks whether to overwrite it or save a copy. A copy is written to another file while you keep working on the original.
 - **Extracting pages**: save only the selected pages as a new PDF, in the order and rotation shown, while the open document stays as it is.
 - **Pages as JPG**: save the selected pages as JPG images (200 DPI), in the rotation shown.
+- **Save when quitting**: closing the window with unsaved changes asks whether to save, save under another name, quit without saving, or stay.
 
 ## Install and run
 
@@ -78,13 +82,14 @@ Uses PyInstaller to build `dist\ChoboPDF.exe` (one file, no console window). Nee
 | Save a copy (the open document stays as it is) | `Ctrl+Alt+S` |
 | Extract the selected pages to a new PDF | `Ctrl+E`, or right-click the pages |
 | Save the selected pages as JPG | `Ctrl+J`, or right-click the pages |
-| Quit | `Ctrl+Q` |
+| Quit (asks about unsaved changes) | `Ctrl+Q`, or close the window |
 
 - **Merged documents** have no file of their own yet, so `Ctrl+S` asks for a name.
 - **Passwords** are asked for once per file and kept in memory only until the file is closed. Cancelling the prompt skips that file; when several files are being opened, the rest still open.
 - **Saving a copy** does not count as saving the document: the title keeps its `*` until the document itself is saved.
 - **Extracting** works like saving a copy: the open document and its undo history stay as they are. The suggested name is `<document>_추출.pdf`.
 - **Copies and extracted pages** cannot be written over a file whose pages are currently open.
+- **Quitting with unsaved changes** offers four choices. *Save* (저장) overwrites the original without asking again, or asks for a name if the document is a merge. *Save as* (다른 이름으로 저장) asks for a file. *Don't save* (저장 안 함) drops the changes. *Cancel* (취소) keeps the window open. The window closes only after the file has been written, so a save that fails or is cancelled leaves it open with the changes intact. `Enter` picks *Save as*, so it never overwrites the original.
 - **JPG export** asks for a file name when one page is selected. With several, it asks for a folder and names the files `<document>_<page number>.jpg`.
 
 ### Editing pages
@@ -116,9 +121,9 @@ Marks are only a reminder while editing: setting one does not count as a change 
 | Zoom in / out | `Ctrl++` / `Ctrl+-`, `Ctrl+wheel`, or the ＋ / － buttons |
 | Fit width | `Ctrl+0`, or the "폭 맞춤" button |
 | Fit page (the whole page on screen) | `Ctrl+9`, or the "쪽 맞춤" button |
-| Next / previous page | `Page Down` / `Page Up` |
+| Next / previous page | `Page Down` / `Page Up`, or `→` / `←` |
 
-The zoom, fit and page keys work once the preview has the focus, so click it first. While it is open, the preview follows the page selected on the left, and the divider can be dragged to change the split.
+The zoom, fit and page keys work once the preview has the focus, so click it first. When a zoomed page is wider than the pane, use the scroll bar to move sideways, because the arrow keys change the page. While it is open, the preview follows the page selected on the left, and the divider can be dragged to change the split.
 
 ## Limitations
 
@@ -136,7 +141,7 @@ The diagram follows three flows through the layers.
 
 - **Edit** (blue): the UI (`chobopdf/ui`) never edits directly. It pushes insert, delete, move and rotate commands onto an undo stack, and they change only the model (`chobopdf/model`), a list of `PageRef(source file, page index, rotation, marked)`. That is why edits are instant and the source PDFs stay untouched. `marked` is the page mark: it rides along with the page but is not part of the document, so it bypasses the undo stack and is never saved.
 - **Open and render** (orange): the Thumbnailer (`chobopdf/render`) opens and renders PDFs with [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) on a single dedicated thread, because PDFium is not thread-safe. It reports when a file needs a password, and the window asks for it and opens the file again. It serves thumbnails (only the pages on or near the screen, kept in an LRU cache), the large preview, and JPG export. Rotation is applied when painting a thumbnail, without re-rendering.
-- **Save, copy and extract** (green): SaveJob (`chobopdf/pdfio`) takes a snapshot of the page list, either all pages or the selection, and writes a new PDF with [pikepdf](https://github.com/pikepdf/pikepdf) on its own thread. The file is written as `.tmp` and then swapped in. After a normal save the window reopens the result, while a copy or an extraction leaves the open document as it is.
+- **Save, copy and extract** (green): SaveJob (`chobopdf/pdfio`) takes a snapshot of the page list, either all pages or the selection, and writes a new PDF with [pikepdf](https://github.com/pikepdf/pikepdf) on its own thread. The file is written as `.tmp` and then swapped in. After a normal save the window reopens the result, while a copy or an extraction leaves the open document as it is. A save chosen while quitting closes the window once the file is written.
 
 The GUI is built with [PySide6](https://doc.qt.io/qtforpython-6/). The repository also holds the pytest unit tests in `tests/` and the icon generator in `tools/make_icon.py`.
 

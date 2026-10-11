@@ -16,7 +16,8 @@ class PreviewPane(QWidget):
     """Shows one page large, fitted to the pane's width, for checking its content.
 
     The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0 9.
-    While the pane has the focus, Page Up / Page Down step through the document.
+    While the pane has the focus, Page Up / Page Down and the left / right
+    arrows step through the document.
     The cached thumbnail is shown stretched at once and replaced when the
     sharp render arrives.
     """
@@ -188,9 +189,9 @@ class PreviewPane(QWidget):
 
     def _on_key(self, event) -> bool:
         key = event.key()
-        if key == Qt.Key.Key_PageDown:
+        if key in (Qt.Key.Key_PageDown, Qt.Key.Key_Right):
             self.pageStepRequested.emit(1)
-        elif key == Qt.Key.Key_PageUp:
+        elif key in (Qt.Key.Key_PageUp, Qt.Key.Key_Left):
             self.pageStepRequested.emit(-1)
         elif not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             return False

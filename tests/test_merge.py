@@ -57,7 +57,7 @@ def test_opening_several_files_merges_them_in_order(window, files, tmp_path):
     assert sources(window) == [("b", 0), ("b", 1), ("b", 2), ("a", 0), ("a", 1), ("c", 0)]
     assert window._document is None
     assert MERGED_NAME in window.windowTitle()
-    assert window.windowTitle().endswith(f"ChoboPDF {chobopdf.__version__}")
+    assert window.windowTitle().endswith(f"ChoboPDF V{chobopdf.__version__}")
     assert window.isWindowModified()  # nothing is saved yet
 
     dest = tmp_path / "merged.pdf"

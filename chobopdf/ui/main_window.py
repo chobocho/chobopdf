@@ -19,7 +19,7 @@ from chobopdf.ui.page_view import MAX_ZOOM, MIN_ZOOM, PageView, pdf_paths
 from chobopdf.ui.preview_pane import PreviewPane
 
 APP_NAME = "ChoboPDF"
-APP_TITLE = f"{APP_NAME} {__version__}"  # shown in the title bar
+APP_TITLE = f"{APP_NAME} V{__version__}"  # shown in the title bar
 MERGED_NAME = "병합 문서"
 _PDF_FILTER = "PDF 파일 (*.pdf)"
 _JPG_FILTER = "JPEG 이미지 (*.jpg)"
@@ -68,6 +68,7 @@ class MainWindow(QMainWindow):
         self._save_job: SaveJob | None = None
         self._save_dest: Path | None = None
         self._save_is_copy = False  # the running save leaves the open document as it is
+        self._close_after_save = False  # the running save was chosen when closing the window
         self._save_extracted = 0  # pages the running save extracts; 0 when it writes the document
         self._exporting: _Export | None = None
         self._scroll_after_open: int | None = None
@@ -393,6 +394,23 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Cancel)
         return answer == QMessageBox.StandardButton.Discard
 
+    def _ask_save_before_close(self) -> str | None:
+        """Ask what to do with unsaved changes: "save", "save_as", "discard", or None to stay."""
+        target = f"\n{self._document}" if self._document else ""
+        box = QMessageBox(QMessageBox.Icon.Warning, APP_NAME,
+                          f"저장하지 않은 변경 내용이 있습니다. 저장하고 끝낼까요?{target}",
+                          parent=self)
+        save = box.addButton("저장(&S)", QMessageBox.ButtonRole.AcceptRole)
+        save_as = box.addButton("다른 이름으로 저장(&A)…", QMessageBox.ButtonRole.AcceptRole)
+        discard = box.addButton("저장 안 함(&N)", QMessageBox.ButtonRole.DestructiveRole)
+        cancel = box.addButton("취소", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(save_as)  # Enter never overwrites the original
+        box.setEscapeButton(cancel)
+        box.exec()
+        clicked = box.clickedButton()
+        return ("save" if clicked is save else "save_as" if clicked is save_as
+                else "discard" if clicked is discard else None)
+
     # --- saving ----------------------------------------------------------
 
     def _save(self) -> None:
@@ -436,6 +454,13 @@ class MainWindow(QMainWindow):
         path = self._choose_pdf_target("다른 이름으로 저장", suggested)
         if path:
             self.save_to(path)
+
+    def _save_before_close(self) -> None:
+        # The close prompt has already asked, so the original is overwritten without a second question.
+        if self._document is None:
+            self._save_as()
+        else:
+            self.save_to(self._document)
 
     def _save_copy(self) -> None:
         path = self._choose_pdf_target("사본으로 저장", self._suggested_pdf("_사본"))
@@ -495,12 +520,14 @@ class MainWindow(QMainWindow):
         self._save_job.wait()
         self._save_job.deleteLater()
         self._save_job = None
+        self._close_after_save = False
         self._update_state()
         return self._save_dest
 
     def _on_save_finished(self) -> None:
         if self._save_job is None:  # window closed meanwhile
             return
+        closing = self._close_after_save
         dest = self._end_save()
         temp = dest.with_name(dest.name + ".tmp")
         if not self._save_is_copy:
@@ -518,6 +545,10 @@ class MainWindow(QMainWindow):
             return
         if self._save_is_copy:
             self.statusBar().showMessage(f"사본을 저장했습니다: {dest}", 5000)
+            return
+        if closing:
+            self._undo_stack.setClean()  # saved, so the window closes without asking again
+            self.close()
             return
         # Continue from the saved file: its pages are now in the edited order.
         self._scroll_after_open = self._view.top_row()
@@ -618,7 +649,18 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, lambda: self.open_files(natural_sorted(paths)))
 
     def closeEvent(self, event) -> None:
-        if not self._confirm_discard():
+        if self.isWindowModified() and not self._busy():
+            choice = self._ask_save_before_close()
+            if choice != "discard":
+                event.ignore()
+                if choice == "save":
+                    self._save_before_close()
+                elif choice == "save_as":
+                    self._save_as()
+                # The save runs in the background; the window closes once the file is written.
+                self._close_after_save = self._save_job is not None
+                return
+        elif not self._confirm_discard():
             event.ignore()
             return
         if self._save_job is not None:

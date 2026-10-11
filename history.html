@@ -201,5 +201,35 @@
   <li>검증: 빌드한 exe를 화면 없는 모드로 띄워 10초간 정상 실행 확인 후 종료. 실제 창에서의 동작(제목의 버전, 암호 입력 창, 추출, JPG 저장)은 확인하지 않음.</li>
   <li><code>dist/</code>는 git에서 제외되어 있어 커밋 대상 아님. 사용자 요청에 따라 이 이력을 <code>main</code>에 커밋하고 <code>origin</code>에 푸시.</li>
 </ul>
+<h2>2026-10-11 버전 표시를 V0.1.1로 변경</h2>
+<ul>
+  <li>제목 표시줄(<code>main_window.py</code>의 <code>APP_TITLE</code>)과 F1 도움말 제목(<code>help_dialog.py</code>)의 버전 앞에 <code>V</code>를 붙여 "ChoboPDF V0.1.1"로 표시. 패키지 버전 <code>__version__</code>은 0.1.1 그대로(PEP 440 형식 유지).</li>
+  <li>테스트(<code>test_help.py</code>, <code>test_merge.py</code>)의 기대 문자열을 새 표시에 맞춤.</li>
+  <li>exe는 다시 빌드하지 않음. <code>dist\ChoboPDF.exe</code>는 이전 표시("ChoboPDF 0.1.1") 그대로임.</li>
+</ul>
+<h2>2026-10-11 미리보기에서 좌우 화살표로 페이지 넘기기</h2>
+<ul>
+  <li><code>preview_pane.py</code>의 <code>_on_key</code>에서 <code>→</code>는 다음 페이지, <code>←</code>는 이전 페이지로 이동(기존 Page Down / Page Up과 같은 동작). 미리보기를 클릭해 포커스가 있을 때만 동작.</li>
+  <li>이에 따라 확대해서 페이지가 창보다 넓을 때 좌우 화살표로 가로 스크롤하던 동작은 없어짐(가로 스크롤바, Shift+휠은 그대로).</li>
+  <li>F1 도움말과 README.md, README.ko.md의 미리보기 단축키 표에 추가. <code>test_preview.py</code>에 화살표 키 검증 추가.</li>
+  <li>검증: 단위 테스트 통과. 실제 창에서의 키 동작과 exe 재빌드는 하지 않음.</li>
+</ul>
+<h2>2026-10-11 끝낼 때 저장 / 다른 이름으로 저장 선택</h2>
+<ul>
+  <li>변경 내용이 있는 채로 창을 닫으면 "버릴까요?" 대신 저장 / 다른 이름으로 저장 / 저장 안 함 / 취소 네 가지를 물음(<code>main_window.py</code>의 <code>_ask_save_before_close</code>, <code>closeEvent</code>).</li>
+  <li>저장: 원본을 바로 덮어씀(덮어쓰기/사본 질문은 다시 하지 않음). 병합 문서처럼 원본 파일이 없으면 이름을 물음. 다른 이름으로 저장: 파일 선택 창을 띄움. 저장은 백그라운드로 진행되고, 파일이 다 쓰인 뒤에 창이 닫힘(<code>_close_after_save</code>).</li>
+  <li>저장을 취소하거나 실패하거나 파일 이름을 고르지 않으면 창은 닫히지 않고 변경 내용도 그대로 남음. Enter 기본 버튼은 "다른 이름으로 저장"(원본을 실수로 덮어쓰지 않도록), Esc는 취소.</li>
+  <li>다른 파일을 열 때의 "버리고 계속할까요?" 질문과, 저장·열기·JPG 저장이 진행 중일 때 닫는 경우는 이전 동작 그대로.</li>
+  <li>F1 도움말의 끝내기 설명 보완. <code>test_saver.py</code>에 닫기 관련 테스트 6개 추가.</li>
+  <li>검증: 단위 테스트 71개 통과. 실제 창에서 대화상자의 모양과 버튼 순서는 확인하지 않음. exe 재빌드는 하지 않음.</li>
+</ul>
+<h2>2026-10-11 README, 아키텍처 SVG 갱신, exe 재빌드</h2>
+<ul>
+  <li>README.md, README.ko.md: "0.1.1에서 달라진 점"에 끝낼 때 저장, 미리보기 화살표 키, 버전 표시(V0.1.1) 추가. 기능 목록, 파일 표의 끝내기 항목, 끝낼 때의 네 가지 선택 설명, 미리보기에서 가로 이동은 스크롤바를 쓰라는 안내, 구조 절의 저장 흐름 설명을 보완.</li>
+  <li><code>docs/architecture.svg</code>: MainWindow에 "save (also on quit)", PreviewPane에 화살표 키로 페이지 넘기기를 반영하고 설명문(desc)을 보완. 층과 화살표 배치는 그대로.</li>
+  <li><code>build_exe.bat</code>으로 <code>dist\ChoboPDF.exe</code>를 다시 빌드. V0.1.1 표시, 화살표 키, 끝낼 때 저장이 포함된 소스 기준.</li>
+  <li>검증: 단위 테스트 71개 통과. Edge 헤드리스로 SVG를 PNG로 렌더링해 글자 잘림 없음 확인(PreviewPane의 긴 줄 1곳 줄임). 빌드한 exe를 화면 없는 모드로 띄워 실행 확인. 실제 창에서의 동작과 GitHub에서의 표시는 확인하지 않음.</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>와 <code>dist/</code>는 포함하지 않음.</li>
+</ul>
 </body>
 </html>

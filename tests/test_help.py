@@ -12,14 +12,14 @@ def test_f1_opens_the_help_with_the_version_and_shortcuts(app):
     window = MainWindow()
     window.show()
     QTest.qWaitForWindowExposed(window)
-    assert window.windowTitle() == f"ChoboPDF {chobopdf.__version__}"
+    assert window.windowTitle() == "ChoboPDF V0.1.1"
     QTest.keyClick(window, Qt.Key.Key_F1)
     app.processEvents()
 
     dialog = window._help
     assert dialog is not None and dialog.isVisible()
     text = dialog.browser.toPlainText()
-    assert f"ChoboPDF {chobopdf.__version__}" in text
+    assert "ChoboPDF V0.1.1" in text
     for keys in ("Ctrl+O", "Ctrl+E", "Ctrl+9", "Page Down", "F1"):
         assert keys in text
 

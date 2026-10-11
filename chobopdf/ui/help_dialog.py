@@ -14,7 +14,7 @@ _SECTIONS = [
         ("Ctrl+Alt+S", "사본으로 저장 (열린 문서는 그대로 유지)"),
         ("Ctrl+E", "선택한 페이지를 새 PDF로 추출 (우클릭 메뉴에도 있음)"),
         ("Ctrl+J","선택한 페이지를 JPG로 저장 (우클릭 메뉴에도 있음)"),
-        ("Ctrl+Q", "끝내기"),
+        ("Ctrl+Q", "끝내기 (변경 내용이 있으면 저장할지 물어봄)"),
     ]),
     ("페이지 편집", [
         ("드래그", "선택한 페이지를 놓은 위치로 이동"),
@@ -36,6 +36,7 @@ _SECTIONS = [
         ("Ctrl+0", "폭 맞춤"),
         ("Ctrl+9", "쪽 맞춤 (페이지 전체가 한 화면에)"),
         ("Page Down / Page Up", "다음 / 이전 페이지"),
+        ("→ / ←", "다음 / 이전 페이지"),
     ]),
     ("도움말", [
         ("F1", "이 도움말"),
@@ -54,7 +55,7 @@ _KEY_COLUMN_WIDTH = 190  # the same in every table, so the descriptions line up
 
 
 def help_html() -> str:
-    parts = [f"<h2>ChoboPDF {__version__}</h2>",
+    parts = [f"<h2>ChoboPDF V{__version__}</h2>",
              "<p>대용량 PDF의 페이지를 썸네일로 보면서 옮기고, 돌리고, 지우고, 합칩니다.</p>"]
     for title, rows in _SECTIONS:
         parts.append(f"<h3>{title}</h3><table cellspacing='0' cellpadding='3'>")

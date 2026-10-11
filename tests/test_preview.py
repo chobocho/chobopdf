@@ -102,6 +102,14 @@ def test_page_keys_step_through_pages_while_the_preview_has_focus(window, app):
     QTest.keyClick(pane, Qt.Key.Key_PageUp)
     assert window._preview._title.text() == "2쪽"
 
+    QTest.keyClick(pane, Qt.Key.Key_Left)                      # the arrows step as well
+    assert window._preview._title.text() == "1쪽"
+    QTest.keyClick(pane, Qt.Key.Key_Left)                      # already on the first page
+    assert window._preview._title.text() == "1쪽"
+    QTest.keyClick(pane, Qt.Key.Key_Right)
+    assert window._preview._title.text() == "2쪽"
+    assert window._view.selected_rows() == [1]
+
 
 def test_preview_size_controls(window, app):
     double_click(window, 0)

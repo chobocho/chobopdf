@@ -192,3 +192,68 @@ def test_extract_cannot_replace_a_file_that_is_open(window, source, monkeypatch)
     assert window._save_job is None
     assert len(warnings) == 1
     assert read_pages(source) == [(width, 0) for width in WIDTHS]
+
+
+@pytest.fixture
+def closing(app, source):
+    """A window with unsaved edits, as it is when the user closes it."""
+    window = MainWindow()
+    window.show()
+    window.open_file(source)
+    wait_for(window._thumbnailer.opened)
+    window.expected = edit(window)
+    yield window
+    if window.isVisible():
+        window._undo_stack.setClean()  # skip the unsaved-changes prompt
+        window.close()
+
+
+def test_closing_with_changes_can_save_over_the_original(closing, source, monkeypatch):
+    monkeypatch.setattr(closing, "_ask_save_before_close", lambda: "save")
+    closing.close()
+    assert closing.isVisible()                                 # until the file is written
+    wait_for(closing._save_job.finished)
+
+    assert read_pages(source) == closing.expected
+    assert not closing.isVisible()
+
+
+def test_closing_with_changes_can_save_under_another_name(closing, source, tmp_path, monkeypatch):
+    dest = tmp_path / "chosen.pdf"
+    monkeypatch.setattr(closing, "_ask_save_before_close", lambda: "save_as")
+    monkeypatch.setattr(closing, "_choose_pdf_target", lambda title, suggested: dest)
+    closing.close()
+    wait_for(closing._save_job.finished)
+
+    assert read_pages(dest) == closing.expected
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]  # original untouched
+    assert not closing.isVisible()
+
+
+def test_closing_stays_open_when_no_name_is_chosen(closing, source, monkeypatch):
+    monkeypatch.setattr(closing, "_ask_save_before_close", lambda: "save_as")
+    monkeypatch.setattr(closing, "_choose_pdf_target", lambda title, suggested: None)
+    closing.close()
+
+    assert closing.isVisible() and closing.isWindowModified()
+    assert closing._save_job is None and not closing._close_after_save
+
+
+@pytest.mark.parametrize("choice, closed", [("discard", True), (None, False)])
+def test_closing_with_changes_can_discard_or_stay(closing, source, monkeypatch, choice, closed):
+    monkeypatch.setattr(closing, "_ask_save_before_close", lambda: choice)
+    closing.close()
+
+    assert closing.isVisible() != closed
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]
+
+
+def test_a_save_cancelled_while_closing_keeps_the_window_open(closing, source, monkeypatch):
+    monkeypatch.setattr(closing, "_ask_save_before_close", lambda: "save")
+    closing.close()
+    closing._save_job.cancel()
+    wait_for(closing._save_job.cancelled)
+
+    assert closing.isVisible() and closing.isWindowModified()
+    assert not closing._close_after_save
+    assert read_pages(source) == [(width, 0) for width in WIDTHS]
