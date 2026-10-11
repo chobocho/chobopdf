@@ -17,7 +17,7 @@ The user interface is in Korean.
 - **Tab between the panes**: `Tab` moves the keyboard between the thumbnails and the preview, so the preview's page keys work without a click.
 - **Focus frame**: while the preview is open, a highlighted frame shows which of the two has the keyboard.
 - **Zoom and fit keys anywhere**: `Ctrl++` / `Ctrl+-` (zoom), `Ctrl+0` (fit width) and `Ctrl+9` (fit page) work wherever the focus is.
-- **Enter opens the preview**: press `Enter` on a thumbnail instead of double-clicking it.
+- **Enter opens the preview**: press `Enter` on a thumbnail instead of double-clicking it. The keyboard moves to the preview, so the page keys work at once.
 
 ### 0.1.1
 
@@ -123,7 +123,7 @@ Marks are only a reminder while editing: setting one does not count as a change 
 
 | Action | How |
 | --- | --- |
-| Open | Double-click a page, or press `Enter` on it |
+| Open | Double-click a page, or press `Enter` on it (`Enter` also moves the focus to the preview) |
 | Close | `Esc`, or the ✕ button |
 | Move the focus between the thumbnails and the preview (the focused one gets a highlighted frame) | `Tab` |
 | Zoom in / out | `Ctrl++` / `Ctrl+-`, `Ctrl+wheel`, or the ＋ / － buttons |
@@ -150,7 +150,7 @@ The diagram follows three flows through the layers, and marks how the keyboard f
 - **Edit** (blue): the UI (`chobopdf/ui`) never edits directly. It pushes insert, delete, move and rotate commands onto an undo stack, and they change only the model (`chobopdf/model`), a list of `PageRef(source file, page index, rotation, marked)`. That is why edits are instant and the source PDFs stay untouched. `marked` is the page mark: it rides along with the page but is not part of the document, so it bypasses the undo stack and is never saved.
 - **Open and render** (orange): the Thumbnailer (`chobopdf/render`) opens and renders PDFs with [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) on a single dedicated thread, because PDFium is not thread-safe. It reports when a file needs a password, and the window asks for it and opens the file again. It serves thumbnails (only the pages on or near the screen, kept in an LRU cache), the large preview, and JPG export. Rotation is applied when painting a thumbnail, without re-rendering.
 - **Save, copy and extract** (green): SaveJob (`chobopdf/pdfio`) takes a snapshot of the page list, either all pages or the selection, and writes a new PDF with [pikepdf](https://github.com/pikepdf/pikepdf) on its own thread. The file is written as `.tmp` and then swapped in. After a normal save the window reopens the result, while a copy or an extraction leaves the open document as it is. A save chosen while quitting closes the window once the file is written.
-- **Keyboard focus** (grey, dashed): `Enter` or a double click on a thumbnail opens the preview. `Tab` moves the focus between the thumbnail grid and the preview, and a frame marks the one that has it. The preview's page keys act only while it has the focus. Zoom, fit width and fit page are shortcuts of the main window, so they work from either side.
+- **Keyboard focus** (grey, dashed): `Enter` or a double click on a thumbnail opens the preview, and `Enter` also gives it the focus. `Tab` moves the focus between the thumbnail grid and the preview, and a frame marks the one that has it. The preview's page keys act only while it has the focus. Zoom, fit width and fit page are shortcuts of the main window, so they work from either side.
 
 The GUI is built with [PySide6](https://doc.qt.io/qtforpython-6/). The repository also holds the pytest unit tests in `tests/` and the icon generator in `tools/make_icon.py`.
 

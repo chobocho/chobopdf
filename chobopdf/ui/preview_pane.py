@@ -65,6 +65,7 @@ class PreviewPane(QWidget):
         self._scroll.setStyleSheet(FOCUS_FRAME)
         self._scroll.viewport().installEventFilter(self)
         self._scroll.installEventFilter(self)  # keys, once a click or Tab has given it the focus
+        self.setFocusProxy(self._scroll)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

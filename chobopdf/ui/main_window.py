@@ -94,8 +94,8 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._preview)
         self._splitter.setChildrenCollapsible(False)
         self._view.doubleClicked.connect(self.open_preview)
-        for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):  # Enter on a page does the same
-            QShortcut(QKeySequence(key), self._view, self.open_preview,
+        for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            QShortcut(QKeySequence(key), self._view, self._enter_preview,
                       context=Qt.ShortcutContext.WidgetShortcut)
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self.close_preview)
         # Sizing works wherever the focus is, also right after the preview has been opened.
@@ -257,6 +257,12 @@ class MainWindow(QMainWindow):
             half = self._splitter.width() // 2
             self._splitter.setSizes([half, half])
         self._update_preview()
+
+    def _enter_preview(self) -> None:
+        """Enter on a page: open the preview and hand it the keyboard."""
+        self.open_preview()
+        if self._preview.isVisible():
+            self._preview.setFocus()
 
     def close_preview(self) -> None:
         self._preview.hide()

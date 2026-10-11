@@ -61,5 +61,14 @@
   <li>검증: Edge 헤드리스로 SVG를 PNG로 렌더링해 글자 겹침·잘림 없음 확인. 빌드한 exe를 화면 없는 모드로 띄워 실행됨을 확인. 단위 테스트 74개는 12번 실행 중 11번 전부 통과, 1번은 1개 실패(5초 대기 시간 초과로 보이며 어느 테스트인지 기록하지 못했고 재현되지 않음. 앞서 <code>test_merge.py</code>의 <code>test_add_files_inserts_after_selection_and_undoes</code>가 같은 식으로 한 번 실패한 적이 있음. 원인은 확인하지 못함).</li>
   <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>와 <code>dist/</code>는 포함하지 않음.</li>
 </ul>
+<h2>2026-10-11 Enter로 열면 미리보기로 포커스 이동</h2>
+<ul>
+  <li>요청: 썸네일에서 Enter로 미리보기를 열면 포커스도 미리보기로 가게 함.</li>
+  <li>수정: <code>main_window.py</code>에 <code>_enter_preview</code>를 추가해 Enter 단축키가 미리보기를 열고 포커스를 넘김. <code>preview_pane.py</code>는 스크롤 영역을 포커스 대리(focus proxy)로 지정. 미리보기가 이미 열려 있을 때 썸네일에서 Enter를 눌러도 포커스가 미리보기로 감. 더블 클릭은 이전처럼 포커스를 썸네일에 둠.</li>
+  <li>Enter 직후 Page Up / Page Down, 화살표로 바로 페이지를 넘길 수 있고, Tab으로 썸네일로 돌아오며, Esc로 닫으면 포커스가 썸네일로 돌아옴.</li>
+  <li>F1 도움말, README.md, README.ko.md에 반영. <code>test_preview.py</code>의 Enter 테스트를 이에 맞게 고침.</li>
+  <li>검증: 단위 테스트 74개 통과. 실제 창에서의 키보드 조작은 확인하지 않음.</li>
+  <li>사용자 요청에 따라 <code>build_exe.bat</code>으로 <code>dist&#92;ChoboPDF.exe</code>를 다시 빌드(화면 없는 모드로 띄워 실행 확인)하고, <code>main</code>에 커밋해 <code>origin</code>에 푸시. 버전은 0.1.2 그대로. <code>.idea/</code>와 <code>dist/</code>는 포함하지 않음.</li>
+</ul>
 </body>
 </html>

@@ -121,10 +121,19 @@ def test_enter_on_a_page_opens_the_preview(window, app):
     QTest.keyClick(view, Qt.Key.Key_Return)
     assert window._preview.isVisible()
     assert window._preview._title.text() == "2쪽"
-    assert view.hasFocus()                                     # as after a double click
+    pane = window._preview._scroll
+    assert pane.hasFocus()                                     # the keyboard goes along
+    QTest.keyClick(pane, Qt.Key.Key_PageDown)
+    assert window._preview._title.text() == "3쪽"
     window.close_preview()
+    assert view.hasFocus()
     QTest.keyClick(view, Qt.Key.Key_Enter, Qt.KeyboardModifier.KeypadModifier)
-    assert window._preview.isVisible()
+    assert window._preview.isVisible() and pane.hasFocus()
+
+    QTest.keyClick(pane, Qt.Key.Key_Tab)                       # already open: Enter moves the focus
+    assert view.hasFocus()
+    QTest.keyClick(view, Qt.Key.Key_Return)
+    assert pane.hasFocus()
 
 
 def test_zoom_keys_work_from_the_page_grid(window, app):
