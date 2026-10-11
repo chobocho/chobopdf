@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 730" width="1200" height="730" role="img" aria-labelledby="title desc" font-family="'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif">
   <title id="title">ChoboPDF architecture</title>
-  <desc id="desc">Three flows through four layers. Edit: the UI pushes undoable commands that change an in-memory page list. Open and render: one thumbnailer thread opens the source PDFs, asking for a password when needed, and renders thumbnails, the preview and JPG images. Save and extract: a save thread copies the listed pages from the source PDFs into a new PDF, also when the user chooses to save while quitting.</desc>
+  <desc id="desc">Three flows through four layers, and the keyboard focus inside the UI. Edit: the UI pushes undoable commands that change an in-memory page list. Open and render: one thumbnailer thread opens the source PDFs, asking for a password when needed, and renders thumbnails, the preview and JPG images. Save and extract: a save thread copies the listed pages from the source PDFs into a new PDF, also when the user chooses to save while quitting. Keyboard focus: Tab moves it between the thumbnail grid and the preview, and a frame marks the one that has it.</desc>
   <defs>
     <marker id="edit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
@@ -11,6 +11,9 @@
     <marker id="save" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#15803d"/>
     </marker>
+    <marker id="focus" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
   </defs>
 
   <rect width="1200" height="730" rx="12" fill="#ffffff"/>
@@ -18,6 +21,8 @@
   <!-- title and legend -->
   <text x="20" y="38" font-size="17" font-weight="700" fill="#0f172a">ChoboPDF architecture</text>
   <g font-size="12" fill="#334155">
+    <path d="M548,33 H584" stroke="#475569" stroke-width="2.2" stroke-dasharray="5 3" marker-start="url(#focus)" marker-end="url(#focus)"/>
+    <text x="592" y="37">Keyboard focus</text>
     <path d="M700,33 H736" stroke="#2563eb" stroke-width="2.2" marker-end="url(#edit)"/>
     <text x="744" y="37">Edit</text>
     <path d="M800,33 H836" stroke="#c2410c" stroke-width="2.2" marker-end="url(#render)"/>
@@ -50,9 +55,9 @@
   <!-- components -->
   <g fill="#ffffff" stroke-width="1.5">
     <rect x="170" y="96" width="250" height="84" rx="8" stroke="#3b82f6"/>
-    <rect x="440" y="96" width="280" height="84" rx="8" stroke="#3b82f6"/>
-    <rect x="740" y="96" width="170" height="84" rx="8" stroke="#3b82f6"/>
-    <rect x="930" y="96" width="130" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="440" y="96" width="250" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="770" y="96" width="180" height="84" rx="8" stroke="#3b82f6"/>
+    <rect x="965" y="96" width="120" height="84" rx="8" stroke="#3b82f6"/>
     <rect x="330" y="285" width="330" height="70" rx="8" stroke="#7c3aed"/>
     <rect x="740" y="285" width="300" height="70" rx="8" stroke="#7c3aed"/>
     <rect x="170" y="455" width="440" height="70" rx="8" stroke="#ea580c"/>
@@ -63,23 +68,23 @@
   </g>
   <g text-anchor="middle" fill="#0f172a">
     <text x="295" y="119" font-size="14" font-weight="700">MainWindow</text>
-    <text x="295" y="138" font-size="11.5" fill="#475569">menus, shortcuts, file dialogs</text>
+    <text x="295" y="138" font-size="11.5" fill="#475569">menus, window-wide shortcuts, dialogs</text>
     <text x="295" y="154" font-size="11.5" fill="#475569">open · merge · add · password prompt</text>
     <text x="295" y="170" font-size="11.5" fill="#475569">save (also on quit) · copy · extract · JPG</text>
 
-    <text x="580" y="119" font-size="14" font-weight="700">PageView + PageDelegate</text>
-    <text x="580" y="138" font-size="11.5" fill="#475569">thumbnail grid, selection, clipboard</text>
-    <text x="580" y="154" font-size="11.5" fill="#475569">drag to reorder, drop PDFs</text>
-    <text x="580" y="170" font-size="11.5" fill="#475569">page marks, thumbnail zoom</text>
+    <text x="565" y="119" font-size="14" font-weight="700">PageView + PageDelegate</text>
+    <text x="565" y="138" font-size="11.5" fill="#475569">thumbnail grid, selection, clipboard</text>
+    <text x="565" y="154" font-size="11.5" fill="#475569">drag to reorder, drop PDFs</text>
+    <text x="565" y="170" font-size="11.5" fill="#475569">page marks, thumbnail zoom</text>
 
-    <text x="825" y="119" font-size="14" font-weight="700">PreviewPane</text>
-    <text x="825" y="138" font-size="11.5" fill="#475569">one page, large</text>
-    <text x="825" y="154" font-size="11.5" fill="#475569">25–400%, fit width / page</text>
-    <text x="825" y="170" font-size="11.5" fill="#475569">← → step through the pages</text>
+    <text x="860" y="119" font-size="14" font-weight="700">PreviewPane</text>
+    <text x="860" y="138" font-size="11.5" fill="#475569">one page, large, 25–400%</text>
+    <text x="860" y="154" font-size="11.5" fill="#475569">Ctrl+0 / 9: fit width / page</text>
+    <text x="860" y="170" font-size="11.5" fill="#475569">← → step through the pages</text>
 
-    <text x="995" y="119" font-size="14" font-weight="700">HelpDialog</text>
-    <text x="995" y="138" font-size="11.5" fill="#475569">F1: shortcuts</text>
-    <text x="995" y="154" font-size="11.5" fill="#475569">and version</text>
+    <text x="1025" y="119" font-size="14" font-weight="700">HelpDialog</text>
+    <text x="1025" y="138" font-size="11.5" fill="#475569">F1: shortcuts</text>
+    <text x="1025" y="154" font-size="11.5" fill="#475569">and version</text>
 
     <text x="495" y="312" font-size="14" font-weight="700">Commands on a QUndoStack</text>
     <text x="495" y="330" font-size="11" fill="#475569">InsertPages · DeletePages · MovePages · RotatePages</text>
@@ -110,11 +115,19 @@
     <text x="1050" y="681" font-size="11.5" fill="#475569">200 DPI, as rotated on screen</text>
   </g>
 
+  <!-- keyboard focus -->
+  <path d="M693,138 H767" fill="none" stroke="#475569" stroke-width="1.8" stroke-dasharray="5 3" marker-start="url(#focus)" marker-end="url(#focus)"/>
+  <g text-anchor="middle" fill="#334155">
+    <text x="730" y="128" font-size="12.5" font-weight="700">Tab</text>
+    <text x="730" y="156" font-size="11">focus,</text>
+    <text x="730" y="170" font-size="11">with a frame</text>
+  </g>
+
   <!-- edit flow -->
   <g fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#edit)">
     <path d="M560,180 V283"/>
     <path d="M660,320 H738"/>
-    <path d="M780,285 V228 H690 V182"/>
+    <path d="M780,285 V228 H650 V182"/>
   </g>
   <g font-size="11.5" fill="#1d4ed8">
     <text x="552" y="231" text-anchor="end">undoable edits</text>

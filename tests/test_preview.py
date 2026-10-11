@@ -111,6 +111,30 @@ def test_page_keys_step_through_pages_while_the_preview_has_focus(window, app):
     assert window._view.selected_rows() == [1]
 
 
+def test_tab_moves_the_focus_between_the_grid_and_the_preview(window, app):
+    view, pane = window._view, window._preview._scroll
+    view.setFocus()
+    QTest.keyClick(view, Qt.Key.Key_Tab)                       # nowhere to go while it is closed
+    assert view.hasFocus()
+
+    double_click(window, 0)
+    shown(window)
+    assert view.hasFocus()
+    assert view.styleSheet() and pane.styleSheet()             # the focused pane is framed
+    QTest.keyClick(view, Qt.Key.Key_Tab)
+    assert pane.hasFocus()
+    QTest.keyClick(pane, Qt.Key.Key_PageDown)                  # the preview's keys work at once
+    assert window._preview._title.text() == "2쪽"
+    QTest.keyClick(pane, Qt.Key.Key_Tab)
+    assert view.hasFocus()
+    QTest.keyClick(view, Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
+    assert pane.hasFocus()
+
+    window.close_preview()                                     # the keyboard returns to the pages
+    assert view.hasFocus()
+    assert not view.styleSheet()                               # no frame with a single pane
+
+
 def test_preview_size_controls(window, app):
     double_click(window, 0)
     fit_width, _ = shown(window)
@@ -149,7 +173,14 @@ def test_fit_page_shows_the_whole_page(window, app):
     assert width < viewport.width()
     fitted_percent = preview._zoom_label.text()
 
-    window._view.select_page(1)                                # landscape: limited by the width
+    window._view.setFocus()                                    # the keys work from the page grid too
+    QTest.keyClick(window._view, Qt.Key.Key_0, Qt.KeyboardModifier.ControlModifier)
+    assert preview._zoom_label.text() == "100%"
+    QTest.keyClick(window._view, Qt.Key.Key_9, Qt.KeyboardModifier.ControlModifier)
+    assert preview._zoom_label.text() == fitted_percent
+    assert preview._image.height() == pytest.approx(viewport.height() - 16, abs=3)
+
+    window._view.select_page(1)                               # landscape: limited by the width
     width, height = shown(window)
     assert width == pytest.approx(viewport.width() - 16, abs=3)
     assert height < viewport.height()

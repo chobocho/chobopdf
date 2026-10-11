@@ -16,7 +16,7 @@ from chobopdf.render.thumbnailer import Thumbnailer
 from chobopdf.ui.help_dialog import HelpDialog
 from chobopdf.ui.page_delegate import THUMB_SIZE
 from chobopdf.ui.page_view import MAX_ZOOM, MIN_ZOOM, PageView, pdf_paths
-from chobopdf.ui.preview_pane import PreviewPane
+from chobopdf.ui.preview_pane import FOCUS_FRAME, PreviewPane
 
 APP_NAME = "ChoboPDF"
 APP_TITLE = f"{APP_NAME} V{__version__}"  # shown in the title bar
@@ -95,6 +95,9 @@ class MainWindow(QMainWindow):
         self._splitter.setChildrenCollapsible(False)
         self._view.doubleClicked.connect(self.open_preview)
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self.close_preview)
+        # Fitting works wherever the focus is, also right after the double click that opened the preview.
+        QShortcut(QKeySequence("Ctrl+0"), self, self._preview.fit_to_width)
+        QShortcut(QKeySequence("Ctrl+9"), self, self._preview.fit_to_page)
 
         self.setCentralWidget(self._splitter)
         self.setWindowTitle(APP_TITLE)
@@ -167,8 +170,10 @@ class MainWindow(QMainWindow):
         self._add_action(help_menu, "도움말(&H)", "F1", self.show_help)
 
         # Thumbnail zoom: slider in the status bar, or Ctrl+wheel over the pages.
+        # Focus by click only, so Tab goes straight between the page grid and the preview.
         zoom_slider = QSlider(Qt.Orientation.Horizontal, minimum=MIN_ZOOM, maximum=MAX_ZOOM,
-                              singleStep=10, pageStep=25, fixedWidth=140, toolTip="썸네일 크기")
+                              singleStep=10, pageStep=25, fixedWidth=140, toolTip="썸네일 크기",
+                              focusPolicy=Qt.FocusPolicy.ClickFocus)
         zoom_label = QLabel(f"{MIN_ZOOM}%")
         zoom_slider.valueChanged.connect(view.set_zoom)
         view.zoomChanged.connect(zoom_slider.setValue)
@@ -240,6 +245,7 @@ class MainWindow(QMainWindow):
     def open_preview(self, *_) -> None:
         if self._preview.isHidden():
             self._preview.show()
+            self._view.setStyleSheet(FOCUS_FRAME)  # with two panes, show which one has the keyboard
             half = self._splitter.width() // 2
             self._splitter.setSizes([half, half])
         self._update_preview()
@@ -247,6 +253,7 @@ class MainWindow(QMainWindow):
     def close_preview(self) -> None:
         self._preview.hide()
         self._preview.show_page(None, 0)
+        self._view.setStyleSheet("")
 
     def _step_preview(self, step: int) -> None:
         current = self._view.currentIndex()

@@ -12,7 +12,13 @@ It does one job, page organizing, and is built around three choices:
 
 The user interface is in Korean.
 
-## What's new in 0.1.1
+## What's new in 0.1.2
+
+- **Tab between the panes**: `Tab` moves the keyboard between the thumbnails and the preview, so the preview's zoom and page keys work without a click.
+- **Focus frame**: while the preview is open, a highlighted frame shows which of the two has the keyboard.
+- **Fit keys anywhere**: `Ctrl+0` (fit width) and `Ctrl+9` (fit page) work wherever the focus is.
+
+### 0.1.1
 
 - **Extract pages**: save only the selected pages as a new PDF (`Ctrl+E`).
 - **Password-protected PDFs**: asks for the password when a file needs one.
@@ -35,7 +41,7 @@ The user interface is in Korean.
 
 ### View
 
-- **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page. The arrow keys step through the pages.
+- **Preview**: double-click a page to split the window and show that page large on the right, with 25–400% zoom, fit width and fit page. The arrow keys step through the pages, and `Tab` moves the keyboard between the thumbnails and the preview.
 - **Thumbnail zoom**: 100–200%, with the status bar slider or Ctrl+wheel.
 
 ### Save and export
@@ -118,12 +124,13 @@ Marks are only a reminder while editing: setting one does not count as a change 
 | --- | --- |
 | Open | Double-click a page |
 | Close | `Esc`, or the ✕ button |
+| Move the focus between the thumbnails and the preview (the focused one gets a highlighted frame) | `Tab` |
 | Zoom in / out | `Ctrl++` / `Ctrl+-`, `Ctrl+wheel`, or the ＋ / － buttons |
 | Fit width | `Ctrl+0`, or the "폭 맞춤" button |
 | Fit page (the whole page on screen) | `Ctrl+9`, or the "쪽 맞춤" button |
 | Next / previous page | `Page Down` / `Page Up`, or `→` / `←` |
 
-The zoom, fit and page keys work once the preview has the focus, so click it first. When a zoomed page is wider than the pane, use the scroll bar to move sideways, because the arrow keys change the page. While it is open, the preview follows the page selected on the left, and the divider can be dragged to change the split.
+The zoom and page keys work once the preview has the focus, so click it or press `Tab` first. Fit width (`Ctrl+0`) and fit page (`Ctrl+9`) work anywhere in the window, without clicking. When a zoomed page is wider than the pane, use the scroll bar to move sideways, because the arrow keys change the page. While it is open, the preview follows the page selected on the left, and the divider can be dragged to change the split.
 
 ## Limitations
 
@@ -137,11 +144,12 @@ The zoom, fit and page keys work once the preview has the focus, so click it fir
 
 ![ChoboPDF architecture](docs/architecture.svg)
 
-The diagram follows three flows through the layers.
+The diagram follows three flows through the layers, and marks how the keyboard focus moves inside the UI.
 
 - **Edit** (blue): the UI (`chobopdf/ui`) never edits directly. It pushes insert, delete, move and rotate commands onto an undo stack, and they change only the model (`chobopdf/model`), a list of `PageRef(source file, page index, rotation, marked)`. That is why edits are instant and the source PDFs stay untouched. `marked` is the page mark: it rides along with the page but is not part of the document, so it bypasses the undo stack and is never saved.
 - **Open and render** (orange): the Thumbnailer (`chobopdf/render`) opens and renders PDFs with [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) on a single dedicated thread, because PDFium is not thread-safe. It reports when a file needs a password, and the window asks for it and opens the file again. It serves thumbnails (only the pages on or near the screen, kept in an LRU cache), the large preview, and JPG export. Rotation is applied when painting a thumbnail, without re-rendering.
 - **Save, copy and extract** (green): SaveJob (`chobopdf/pdfio`) takes a snapshot of the page list, either all pages or the selection, and writes a new PDF with [pikepdf](https://github.com/pikepdf/pikepdf) on its own thread. The file is written as `.tmp` and then swapped in. After a normal save the window reopens the result, while a copy or an extraction leaves the open document as it is. A save chosen while quitting closes the window once the file is written.
+- **Keyboard focus** (grey, dashed): `Tab` moves the focus between the thumbnail grid and the preview, and a frame marks the one that has it. The preview's zoom and page keys act only while it has the focus. Fit width and fit page are shortcuts of the main window, so they work from either side.
 
 The GUI is built with [PySide6](https://doc.qt.io/qtforpython-6/). The repository also holds the pytest unit tests in `tests/` and the icon generator in `tools/make_icon.py`.
 

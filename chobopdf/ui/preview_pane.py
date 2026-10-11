@@ -10,14 +10,18 @@ _ZOOM_STEPS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0]  # multiples of "
 _MAX_RENDER_PX = 3500  # widest image asked of the renderer; beyond it the image is stretched
 _MARGIN = 8
 _EPSILON = 1e-6
+# Frame in the highlight colour around whichever of the page grid and the preview has the keyboard.
+FOCUS_FRAME = ("QAbstractScrollArea { border: 2px solid transparent; }"
+               "QAbstractScrollArea:focus { border: 2px solid palette(highlight); }")
 
 
 class PreviewPane(QWidget):
     """Shows one page large, fitted to the pane's width, for checking its content.
 
     The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0 9.
-    While the pane has the focus, Page Up / Page Down and the left / right
-    arrows step through the document.
+    Ctrl+0 and Ctrl+9 work anywhere in the window; the other keys, and Page Up /
+    Page Down and the left / right arrows that step through the document, while
+    the pane has the focus, which a click or Tab gives it.
     The cached thumbnail is shown stretched at once and replaced when the
     sharp render arrives.
     """
@@ -44,10 +48,9 @@ class PreviewPane(QWidget):
         self._zoom_out_button = self._add_button(header, "－", "축소 (Ctrl+-)", lambda: self._zoom(-1))
         header.addWidget(self._zoom_label)
         self._zoom_in_button = self._add_button(header, "＋", "확대 (Ctrl++)", lambda: self._zoom(1))
-        self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", lambda: self._set_scale(1.0))
+        self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", self.fit_to_width)
         self._fit_page_button = self._add_button(
-            header, "쪽 맞춤", "페이지 전체가 보이도록 세로 길이에 맞춤 (Ctrl+9)",
-            lambda: self._set_scale(1.0, fit_page=True))
+            header, "쪽 맞춤", "페이지 전체가 보이도록 세로 길이에 맞춤 (Ctrl+9)", self.fit_to_page)
         header.addSpacing(8)
         self._add_button(header, "✕", "미리보기 닫기 (Esc)", self.closeRequested.emit)
 
@@ -59,8 +62,9 @@ class PreviewPane(QWidget):
         # Always shown, so fitting to the width does not flip the scroll bar on and off.
         self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self._scroll.setWidget(self._image)
+        self._scroll.setStyleSheet(FOCUS_FRAME)
         self._scroll.viewport().installEventFilter(self)
-        self._scroll.installEventFilter(self)  # keys, once a click has given it the focus
+        self._scroll.installEventFilter(self)  # keys, once a click or Tab has given it the focus
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -161,6 +165,13 @@ class PreviewPane(QWidget):
             self._fit()
             self._render_timer.start()
 
+    def fit_to_width(self) -> None:
+        self._set_scale(1.0)
+
+    def fit_to_page(self) -> None:
+        """Size the page so all of it is visible."""
+        self._set_scale(1.0, fit_page=True)
+
     def _zoom(self, direction: int) -> None:
         """Step to the next larger (+1) or smaller (-1) size from wherever the page is now."""
         scale = self._current_scale()
@@ -200,9 +211,9 @@ class PreviewPane(QWidget):
         elif key == Qt.Key.Key_Minus:
             self._zoom(-1)
         elif key == Qt.Key.Key_0:
-            self._set_scale(1.0)
+            self.fit_to_width()
         elif key == Qt.Key.Key_9:
-            self._set_scale(1.0, fit_page=True)
+            self.fit_to_page()
         else:
             return False
         return True

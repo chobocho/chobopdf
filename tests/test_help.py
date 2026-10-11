@@ -12,14 +12,14 @@ def test_f1_opens_the_help_with_the_version_and_shortcuts(app):
     window = MainWindow()
     window.show()
     QTest.qWaitForWindowExposed(window)
-    assert window.windowTitle() == "ChoboPDF V0.1.1"
+    assert window.windowTitle() == "ChoboPDF V0.1.2"
     QTest.keyClick(window, Qt.Key.Key_F1)
     app.processEvents()
 
     dialog = window._help
     assert dialog is not None and dialog.isVisible()
     text = dialog.browser.toPlainText()
-    assert "ChoboPDF V0.1.1" in text
+    assert "ChoboPDF V0.1.2" in text
     for keys in ("Ctrl+O", "Ctrl+E", "Ctrl+9", "Page Down", "F1"):
         assert keys in text
 
@@ -29,7 +29,7 @@ def test_f1_opens_the_help_with_the_version_and_shortcuts(app):
 
 
 def test_version_is_0_1_1_and_comes_from_the_package():
-    assert chobopdf.__version__ == "0.1.1"
+    assert chobopdf.__version__ == "0.1.2"
     pyproject = tomllib.loads(
         (Path(chobopdf.__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["project"]["dynamic"] == ["version"]
