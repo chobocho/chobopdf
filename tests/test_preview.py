@@ -111,6 +111,41 @@ def test_page_keys_step_through_pages_while_the_preview_has_focus(window, app):
     assert window._view.selected_rows() == [1]
 
 
+def test_enter_on_a_page_opens_the_preview(window, app):
+    view = window._view
+    view.setFocus()
+    QTest.keyClick(view, Qt.Key.Key_Return)                    # no current page yet
+    assert window._preview.isHidden()
+
+    view.select_page(1)
+    QTest.keyClick(view, Qt.Key.Key_Return)
+    assert window._preview.isVisible()
+    assert window._preview._title.text() == "2쪽"
+    assert view.hasFocus()                                     # as after a double click
+    window.close_preview()
+    QTest.keyClick(view, Qt.Key.Key_Enter, Qt.KeyboardModifier.KeypadModifier)
+    assert window._preview.isVisible()
+
+
+def test_zoom_keys_work_from_the_page_grid(window, app):
+    double_click(window, 0)
+    shown(window)
+    view, label = window._view, window._preview._zoom_label
+    view.setFocus()
+    ctrl = Qt.KeyboardModifier.ControlModifier
+    QTest.keyClick(view, Qt.Key.Key_Plus, ctrl)
+    assert label.text() == "125%"
+    QTest.keyClick(view, Qt.Key.Key_Equal, ctrl)
+    assert label.text() == "150%"
+    QTest.keyClick(view, Qt.Key.Key_Plus, ctrl | Qt.KeyboardModifier.KeypadModifier)
+    assert label.text() == "200%"
+    QTest.keyClick(view, Qt.Key.Key_Minus, ctrl)
+    assert label.text() == "150%"
+    QTest.keyClick(view, Qt.Key.Key_Minus, ctrl | Qt.KeyboardModifier.KeypadModifier)
+    assert label.text() == "125%"
+    assert view.hasFocus()
+
+
 def test_tab_moves_the_focus_between_the_grid_and_the_preview(window, app):
     view, pane = window._view, window._preview._scroll
     view.setFocus()

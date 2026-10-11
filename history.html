@@ -45,5 +45,21 @@
   <li>검증: 단위 테스트 72개 통과. Edge 헤드리스로 SVG를 PNG로 렌더링해 글자 겹침·잘림 없음 확인. 빌드한 exe를 화면 없는 모드로 띄워 실행됨을 확인. 실제 창에서의 키보드 조작과 GitHub에서의 표시는 확인하지 않음.</li>
   <li>사용자 요청에 따라 Ctrl+0 / Ctrl+9, Tab 포커스 이동, 포커스 표시 변경까지 묶어 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. 이전 이력 백업 파일도 함께 커밋. <code>.idea/</code>와 <code>dist/</code>는 포함하지 않음.</li>
 </ul>
+<h2>2026-10-11 Ctrl++ / Ctrl+-를 창 어디서나, 썸네일에서 Enter로 미리보기 열기</h2>
+<ul>
+  <li>요청: 확대/축소 키(Ctrl++, Ctrl+-)도 창 어디서나 동작하게 하고, 썸네일 창에서 Enter를 치면 페이지 보기(미리보기)가 열리게 함.</li>
+  <li>확대/축소: <code>main_window.py</code>의 창 전체 단축키에 Ctrl++, Ctrl+=, Ctrl+-를 추가(Ctrl+0, Ctrl+9와 한 묶음). <code>preview_pane.py</code>에 공개 메서드 <code>zoom_in</code>, <code>zoom_out</code>을 만들어 버튼, 키, 단축키가 같이 씀. 이제 미리보기 전용으로 남은 키는 페이지 이동(Page Up / Page Down, 화살표)뿐.</li>
+  <li>Enter: 썸네일 격자에 포커스가 있을 때 Enter(숫자 키패드 Enter 포함)를 누르면 현재 페이지의 미리보기가 열림. 더블 클릭과 같은 동작이며 포커스는 썸네일에 남음(미리보기로 가려면 Tab). 현재 페이지가 없으면(문서가 없거나 아무것도 고르지 않음) 열지 않음.</li>
+  <li>F1 도움말, README.md, README.ko.md를 이에 맞게 고침("0.1.2에서 달라진 점" 포함). <code>test_preview.py</code>에 테스트 2개 추가.</li>
+  <li>검증: 단위 테스트 74개 통과. 테스트는 합성 키 이벤트를 쓰므로, 실제 키보드에서 Shift를 함께 눌러 입력하는 Ctrl++(Ctrl+Shift+=)는 확인하지 못함. 실제 창에서의 조작도 확인하지 않음.</li>
+</ul>
+<h2>2026-10-11 아키텍처 SVG와 README 갱신, exe 재빌드, 커밋과 푸시</h2>
+<ul>
+  <li><code>docs/architecture.svg</code>: PageView에 "Enter / 더블 클릭으로 미리보기 열기", MainWindow에 포커스와 무관하게 동작하는 단축키, PreviewPane에 확대/축소와 맞춤 키(Ctrl + − 0 9)를 반영하고 설명문(desc)을 고침. 층과 화살표 배치는 그대로.</li>
+  <li>README.md, README.ko.md: 구조 절의 키보드 포커스 설명에 Enter로 미리보기 열기를 추가(사용법 표와 "0.1.2에서 달라진 점"은 앞 작업에서 이미 반영).</li>
+  <li><code>build_exe.bat</code>으로 <code>dist\ChoboPDF.exe</code>를 다시 빌드. 버전은 0.1.2 그대로이며 Ctrl++ / Ctrl+-, Enter 변경이 포함됨.</li>
+  <li>검증: Edge 헤드리스로 SVG를 PNG로 렌더링해 글자 겹침·잘림 없음 확인. 빌드한 exe를 화면 없는 모드로 띄워 실행됨을 확인. 단위 테스트 74개는 12번 실행 중 11번 전부 통과, 1번은 1개 실패(5초 대기 시간 초과로 보이며 어느 테스트인지 기록하지 못했고 재현되지 않음. 앞서 <code>test_merge.py</code>의 <code>test_add_files_inserts_after_selection_and_undoes</code>가 같은 식으로 한 번 실패한 적이 있음. 원인은 확인하지 못함).</li>
+  <li>사용자 요청에 따라 <code>main</code>에 커밋하고 <code>origin</code>에 푸시. <code>.idea/</code>와 <code>dist/</code>는 포함하지 않음.</li>
+</ul>
 </body>
 </html>

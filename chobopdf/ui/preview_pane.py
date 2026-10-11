@@ -18,10 +18,10 @@ FOCUS_FRAME = ("QAbstractScrollArea { border: 2px solid transparent; }"
 class PreviewPane(QWidget):
     """Shows one page large, fitted to the pane's width, for checking its content.
 
-    The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0 9.
-    Ctrl+0 and Ctrl+9 work anywhere in the window; the other keys, and Page Up /
-    Page Down and the left / right arrows that step through the document, while
-    the pane has the focus, which a click or Tab gives it.
+    The size is changed with the header buttons, Ctrl+wheel, or Ctrl with + - 0 9,
+    keys that work anywhere in the window. While the pane has the focus, which a
+    click or Tab gives it, Page Up / Page Down and the left / right arrows step
+    through the document.
     The cached thumbnail is shown stretched at once and replaced when the
     sharp render arrives.
     """
@@ -45,9 +45,9 @@ class PreviewPane(QWidget):
         header.setContentsMargins(8, 2, 2, 2)
         header.setSpacing(2)
         header.addWidget(self._title, 1)
-        self._zoom_out_button = self._add_button(header, "－", "축소 (Ctrl+-)", lambda: self._zoom(-1))
+        self._zoom_out_button = self._add_button(header, "－", "축소 (Ctrl+-)", self.zoom_out)
         header.addWidget(self._zoom_label)
-        self._zoom_in_button = self._add_button(header, "＋", "확대 (Ctrl++)", lambda: self._zoom(1))
+        self._zoom_in_button = self._add_button(header, "＋", "확대 (Ctrl++)", self.zoom_in)
         self._add_button(header, "폭 맞춤", "창 폭에 맞춤 (Ctrl+0)", self.fit_to_width)
         self._fit_page_button = self._add_button(
             header, "쪽 맞춤", "페이지 전체가 보이도록 세로 길이에 맞춤 (Ctrl+9)", self.fit_to_page)
@@ -172,6 +172,12 @@ class PreviewPane(QWidget):
         """Size the page so all of it is visible."""
         self._set_scale(1.0, fit_page=True)
 
+    def zoom_in(self) -> None:
+        self._zoom(1)
+
+    def zoom_out(self) -> None:
+        self._zoom(-1)
+
     def _zoom(self, direction: int) -> None:
         """Step to the next larger (+1) or smaller (-1) size from wherever the page is now."""
         scale = self._current_scale()
@@ -207,9 +213,9 @@ class PreviewPane(QWidget):
         elif not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             return False
         elif key in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
-            self._zoom(1)
+            self.zoom_in()
         elif key == Qt.Key.Key_Minus:
-            self._zoom(-1)
+            self.zoom_out()
         elif key == Qt.Key.Key_0:
             self.fit_to_width()
         elif key == Qt.Key.Key_9:

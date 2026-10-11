@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 730" width="1200" height="730" role="img" aria-labelledby="title desc" font-family="'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif">
   <title id="title">ChoboPDF architecture</title>
-  <desc id="desc">Three flows through four layers, and the keyboard focus inside the UI. Edit: the UI pushes undoable commands that change an in-memory page list. Open and render: one thumbnailer thread opens the source PDFs, asking for a password when needed, and renders thumbnails, the preview and JPG images. Save and extract: a save thread copies the listed pages from the source PDFs into a new PDF, also when the user chooses to save while quitting. Keyboard focus: Tab moves it between the thumbnail grid and the preview, and a frame marks the one that has it.</desc>
+  <desc id="desc">Three flows through four layers, and the keyboard focus inside the UI. Edit: the UI pushes undoable commands that change an in-memory page list. Open and render: one thumbnailer thread opens the source PDFs, asking for a password when needed, and renders thumbnails, the preview and JPG images. Save and extract: a save thread copies the listed pages from the source PDFs into a new PDF, also when the user chooses to save while quitting. Keyboard: Enter or a double click on a thumbnail opens the preview, Tab moves the focus between the thumbnail grid and the preview, a frame marks the one that has it, and the zoom and fit keys are shortcuts of the main window that work from either side.</desc>
   <defs>
     <marker id="edit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
@@ -68,18 +68,18 @@
   </g>
   <g text-anchor="middle" fill="#0f172a">
     <text x="295" y="119" font-size="14" font-weight="700">MainWindow</text>
-    <text x="295" y="138" font-size="11.5" fill="#475569">menus, window-wide shortcuts, dialogs</text>
+    <text x="295" y="138" font-size="11.5" fill="#475569">menus, dialogs, shortcuts for any focus</text>
     <text x="295" y="154" font-size="11.5" fill="#475569">open · merge · add · password prompt</text>
     <text x="295" y="170" font-size="11.5" fill="#475569">save (also on quit) · copy · extract · JPG</text>
 
     <text x="565" y="119" font-size="14" font-weight="700">PageView + PageDelegate</text>
     <text x="565" y="138" font-size="11.5" fill="#475569">thumbnail grid, selection, clipboard</text>
-    <text x="565" y="154" font-size="11.5" fill="#475569">drag to reorder, drop PDFs</text>
-    <text x="565" y="170" font-size="11.5" fill="#475569">page marks, thumbnail zoom</text>
+    <text x="565" y="154" font-size="11.5" fill="#475569">drag to reorder, drop PDFs, marks, zoom</text>
+    <text x="565" y="170" font-size="11.5" fill="#475569">Enter / double click: open the preview</text>
 
     <text x="860" y="119" font-size="14" font-weight="700">PreviewPane</text>
     <text x="860" y="138" font-size="11.5" fill="#475569">one page, large, 25–400%</text>
-    <text x="860" y="154" font-size="11.5" fill="#475569">Ctrl+0 / 9: fit width / page</text>
+    <text x="860" y="154" font-size="11.5" fill="#475569">Ctrl + − 0 9: zoom and fit</text>
     <text x="860" y="170" font-size="11.5" fill="#475569">← → step through the pages</text>
 
     <text x="1025" y="119" font-size="14" font-weight="700">HelpDialog</text>

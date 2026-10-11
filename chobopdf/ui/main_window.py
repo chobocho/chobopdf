@@ -94,10 +94,16 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._preview)
         self._splitter.setChildrenCollapsible(False)
         self._view.doubleClicked.connect(self.open_preview)
+        for key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):  # Enter on a page does the same
+            QShortcut(QKeySequence(key), self._view, self.open_preview,
+                      context=Qt.ShortcutContext.WidgetShortcut)
         QShortcut(QKeySequence(Qt.Key.Key_Escape), self, self.close_preview)
-        # Fitting works wherever the focus is, also right after the double click that opened the preview.
-        QShortcut(QKeySequence("Ctrl+0"), self, self._preview.fit_to_width)
-        QShortcut(QKeySequence("Ctrl+9"), self, self._preview.fit_to_page)
+        # Sizing works wherever the focus is, also right after the preview has been opened.
+        for keys, slot in (("Ctrl++", self._preview.zoom_in), ("Ctrl+=", self._preview.zoom_in),
+                           ("Ctrl+-", self._preview.zoom_out),
+                           ("Ctrl+0", self._preview.fit_to_width),
+                           ("Ctrl+9", self._preview.fit_to_page)):
+            QShortcut(QKeySequence(keys), self, slot)
 
         self.setCentralWidget(self._splitter)
         self.setWindowTitle(APP_TITLE)
@@ -243,6 +249,8 @@ class MainWindow(QMainWindow):
     # --- preview ---------------------------------------------------------
 
     def open_preview(self, *_) -> None:
+        if not self._view.currentIndex().isValid():
+            return
         if self._preview.isHidden():
             self._preview.show()
             self._view.setStyleSheet(FOCUS_FRAME)  # with two panes, show which one has the keyboard
